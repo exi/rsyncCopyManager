@@ -36,12 +36,7 @@ app.configure('production', function() {
 
 // Routes
 
-app.get('/', routes.index);
-app.get('/login', routes.login);
-app.post('/login', routes.login);
-app.get('/logout', routes.logout);
-app.post('/downloads', routes.downloads);
-app.post('/servers', routes.servers);
+routes.apply(app);
 
 var server = http.createServer(app);
 server.listen(config.port, function() {

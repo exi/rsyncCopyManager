@@ -8,9 +8,22 @@ requirejs.config({
     }
 });
 
-require(['jquery', 'menu/behaviour', 'domReady', 'liveQuery', 'subscribe'], function($, menuBehaviour, domReady) {
+require([
+    'jquery',
+    'menu/behaviour',
+    'servers/behaviour',
+    'domReady',
+    'liveQuery',
+    'subscribe'
+], function(
+    $,
+    menuBehaviour,
+    serverBehaviour,
+    domReady
+) {
     domReady(function() {
         menuBehaviour.apply();
+        serverBehaviour.apply();
         $('.menu-downloads-link').trigger('click');
     });
 });

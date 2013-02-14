@@ -4,8 +4,8 @@
   , "private": true
   , "dependencies": {
       "express": "*"
-    , "less": "*"
     , "jade": "*"
     , "less-middleware": "*"
+    , "sequelize": "*"
   }
 }
