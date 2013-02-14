@@ -1,0 +1,11 @@
+{
+    "name": "rsyncCopyManager"
+  , "version": "0.0.1"
+  , "private": true
+  , "dependencies": {
+      "express": "*"
+    , "less": "*"
+    , "jade": "*"
+    , "less-middleware": "*"
+  }
+}

@@ -1,0 +1,20 @@
+extends layout
+
+block header
+  .navbar.navbar-fixed-top
+    .navbar-inner
+      .container
+        a.brand(href="#") rsyncCopyManager
+        .nav-collapse
+          ul.nav
+            li
+              a.menu-downloads-link(href="#") Downloads
+            li
+              a(href="#") Filelist
+            li
+              a.menu-servers-link(href="#") Your Servers
+            li
+              a(href="/logout") Logout
+
+block content
+  #mainContainer.container
