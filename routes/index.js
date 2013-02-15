@@ -2,11 +2,42 @@
  * GET home page.
  */
 var servers = require('./servers');
+var database = require('../database.js');
 
 module.exports.apply = function(app) {
-    app.get('/',  function(req, res) {
-        if (req.session && req.session.user !== undefined) {
-            res.render('index', { title: 'rsyncCopyManager' });
+    app.all('/login', function(req, res) {
+        var renderdata = {
+            title: 'rsyncCopyManager - Login'
+        };
+
+        if (req.body && req.body.user && req.body.password) {
+            database(function(err, models) {
+                models.User.find({
+                    where: {
+                        name: req.body.user,
+                        password: req.body.password
+                    }
+                }).success(function(user) {
+                    if (user === null) {
+                        renderdata.error = 'Invalid username or password';
+                        res.render('login', renderdata);
+                    } else {
+                        req.session = {
+                            user: user
+                        };
+                        res.redirect('/');
+                    }
+                });
+            });
+        } else {
+            renderdata.error = '';
+            res.render('login', renderdata);
+        }
+    });
+
+    app.all('*', function(req, res, next) {
+        if (req.session.user) {
+            next();
         } else {
             res.redirect('/login');
         }
@@ -17,27 +48,8 @@ module.exports.apply = function(app) {
         res.redirect('/');
     });
 
-    app.all('/login', function(req, res) {
-        if (req.body && req.body.user == 'exi' && req.body.password == 'pwd') {
-            req.session = {
-                user: {
-                    name: 'exi'
-                }
-            };
-            res.redirect('/');
-        } else {
-            var renderdata = {
-                title: 'rsyncCopyManager - Login'
-            };
-
-            if (req.body && req.body.user && req.body.password) {
-                renderdata.error = 'Invalid username or password';
-                res.render('login', renderdata);
-            } else {
-                renderdata.error = '';
-                res.render('login', renderdata);
-            }
-        }
+    app.get('/',  function(req, res) {
+        res.render('index', { title: 'rsyncCopyManager' });
     });
 
     app.post('/downloads', function(req, res) {

@@ -3,14 +3,15 @@
   p so many servers are here
 
   form.form-horizontal.add-server-form
+    .add-server-form-status
     .control-group
       label.control-label(for="host") Hostname:
       .controls
-        input(type="text", name="host", placeholder="Hostname")
+        input(type="text", name="hostname", placeholder="Hostname")
     .control-group
-      label.control-label(for="user") Username:
+      label.control-label(for="username") Username:
       .controls
-        input(type="text", name="user", placeholder="Username")
+        input(type="text", name="username", placeholder="Username")
     .control-group
       label.control-label(for="path") Path:
       .controls
@@ -21,23 +22,5 @@
         textarea(name="pubkey", rows="4")
     button.btn.btn-primary(href="#") Add Server
 
-  if (servers.length > 0)
-    table.table
-      thead
-        tr
-          th Host
-          th User
-          th Path
-          th PubKey
-          th
-      tbody
-        each server in servers
-          tr
-            td= server.host
-            td= server.user
-            td= server.path
-            td= server.pubkey
-            td
-              button.btn.btn-danger(type="submit") Delete
-  else
-    p You did not add any servers yet.
+  .servers-list
+    include servers-list

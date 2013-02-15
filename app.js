@@ -22,8 +22,8 @@ app.configure(function() {
     app.use(express.bodyParser());
     app.use(express.methodOverride());
     app.use(lessMiddleware({ src : __dirname + '/public', paths: [__dirname + '/vendor/twitter/bootstrap/less'] }));
-    app.use(app.router);
     app.use(express.static(__dirname + '/public'));
+    app.use(app.router);
 });
 
 app.configure('development', function() {
