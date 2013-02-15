@@ -1,26 +1,27 @@
 .hero-unit
   h1 Servers
-  p so many servers are here
+  .row
+    .span5
+      p Add your server
 
-  form.form-horizontal.add-server-form
-    .add-server-form-status
-    .control-group
-      label.control-label(for="host") Hostname:
-      .controls
-        input(type="text", name="hostname", placeholder="Hostname")
-    .control-group
-      label.control-label(for="username") Username:
-      .controls
-        input(type="text", name="username", placeholder="Username")
-    .control-group
-      label.control-label(for="path") Path:
-      .controls
-        input(type="text", name="path", placeholder="Path")
-    .control-group
-      label.control-label(for="pubkey") Public Key:
-      .controls
-        textarea(name="pubkey", rows="4")
-    button.btn.btn-primary(href="#") Add Server
+      form.form-horizontal.add-server-form
+        .add-server-form-status
+        .control-group
+          label.control-label(for="host") Hostname:
+          .controls
+            input(type="text", name="hostname", placeholder="Hostname")
+        .control-group
+          label.control-label(for="username") Username:
+          .controls
+            input(type="text", name="username", placeholder="Username")
+        .control-group
+          label.control-label(for="path") Path:
+          .controls
+            input(type="text", name="path", placeholder="Path")
+        button.btn.btn-primary(href="#") Add Server
+    .span4
+      p Add this pubkey to your authorized_keys file:
+      textarea(rows="7", style="width: 100%; word-wrap: break-word")= pubkey
 
   .servers-list
     include servers-list

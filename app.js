@@ -7,6 +7,8 @@ var express = require('express'),
     routes = require('./routes'),
     http = require('http'),
     config = require('./config.js'),
+    database = require('./database.js'),
+    serverManager = require('./serverManager.js'),
     lessMiddleware = require('less-middleware');
 
 var app = module.exports = express();
@@ -36,7 +38,12 @@ app.configure('production', function() {
 
 // Routes
 
-routes.apply(app);
+routes.apply(app, {
+    serverManager: new serverManager()
+});
+
+// sync db
+database(function() {});
 
 var server = http.createServer(app);
 server.listen(config.port, function() {

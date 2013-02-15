@@ -4,7 +4,7 @@
 var servers = require('./servers');
 var database = require('../database.js');
 
-module.exports.apply = function(app) {
+module.exports.apply = function(app, dependencies) {
     app.all('/login', function(req, res) {
         var renderdata = {
             title: 'rsyncCopyManager - Login'
@@ -58,5 +58,5 @@ module.exports.apply = function(app) {
         });
     });
 
-    servers.apply(app);
+    servers.apply(app, dependencies);
 };

@@ -5,47 +5,60 @@ var _ = require('lodash');
 var util = require('util');
 var events = require('events');
 
-var rsync = module.exports = function (options) {
-    events.EventEmitter.call(this);
-
+function buildargs(options, mandatory) {
     options = options || {};
 
-    var mandatory = ['dest', 'username', 'host', 'filename', 'keyfile'];
+    mandatory = mandatory || [];
     mandatory.forEach(function(item) {
-        if (typeof options[item] === 'undefined') {
+        if (!options[item]) {
             throw (new Error('"' + item + '" is missing from options'));
         }
     });
-
-    var src = options.username + '@' + options.host + ':' + options.filename;
 
     var args = [];
 
     args.push('--rsh=ssh -i"' + options.keyfile + '"');
     args.push('--recursive');
-    args.push('--partial');
-    args.push('--progress');
+    if (options.filelist !== true) {
+        args.push('--partial');
+        args.push('--progress');
 
-    switch (options.compareMode) {
-        case 'sizeOnly':
-            args.push('--size-only');
-            break;
-        case 'checksum':
-            args.push('--checksum');
-            break;
+        switch (options.compareMode) {
+            case 'sizeOnly':
+                args.push('--size-only');
+                break;
+            case 'checksum':
+                args.push('--checksum');
+                break;
+        }
     }
 
-    if (typeof options.args !== 'undefined' && util.isArray(options.args)) {
+    if (options.args && util.isArray(options.args)) {
         args = _.union(args, options.args);
     }
 
     args = _.unique(args);
-    args.push('--bwlimit=10');
-    args.push(src);
-    args.push(options.dest);
+    if (options.bwlimit) {
+        args.push('--bwlimit=' + options.bwlimit);
+    }
 
-    var cmd = 'rsync ' + args.join(' ');
-    console.log('cmd: ' + cmd);
+    var src = options.username + '@' + options.host + ':' + options.src;
+
+    args.push(src);
+
+    if (options.dest) {
+        args.push(options.dest);
+    }
+
+    console.log(args.join(' '));
+
+    return args;
+}
+
+var transfer = module.exports.transfer = function (options) {
+    events.EventEmitter.call(this);
+
+    var args = buildargs(options, ['username', 'host', 'src', 'dest', 'keyfile']);
 
     try {
         var process = spawn('rsync', args);
@@ -79,4 +92,46 @@ var rsync = module.exports = function (options) {
     }
 };
 
-util.inherits(rsync, events.EventEmitter);
+var filelist = module.exports.filelist = function (options) {
+    events.EventEmitter.call(this);
+
+    if (options && options.dest) {
+        delete options.dest;
+    }
+    options.filelist = true;
+
+    var args = buildargs(options, ['username', 'host', 'src', 'keyfile']);
+
+    try {
+        var process = spawn('rsync', args);
+        var self = this;
+        var filelistregex = /([d\-])[rwx\-]{9}\s+(\d+)\s+\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}\s(.*)/;
+        var filelist = [];
+
+        process.stdout.on('data', function (data) {
+            if (filelistregex.test(data)) {
+                var m = filelistregex.exec(data);
+                filelist.push({
+                    isDir: m[1] === 'd',
+                    size: m[2],
+                    path: m[3]
+                });
+            }
+        });
+
+        process.stderr.on('data', function (data) {
+        });
+
+        process.on('exit', function (code) {
+            if (code === 0) {
+                self.emit('finish', filelist);
+            } else {
+                self.emit('error', code);
+            }
+        });
+    } catch (error) {
+        this.emit('error', error);
+    }
+};
+
+util.inherits(filelist, events.EventEmitter);

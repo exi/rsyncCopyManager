@@ -14,10 +14,6 @@ function sendError(res, msg) {
     );
 }
 
-function getKeyPath(filename) {
-    return config.keydir + '/' + filename;
-}
-
 function convertServersForView(servers) {
     var ret = [];
     servers.forEach(function(server) {
@@ -25,8 +21,7 @@ function convertServersForView(servers) {
             id: server.id,
             username: server.username,
             hostname: server.hostname,
-            path: server.path,
-            pubkey: '' + fs.readFileSync(getKeyPath(server.keyfile))
+            path: server.path
         });
     });
 
@@ -62,13 +57,16 @@ function sendServerList(res, user) {
     });
 }
 
-module.exports.apply = function(app) {
+module.exports.apply = function(app, dependencies) {
     app.post('/servers', function(req, res) {
         getUserAndModels(req.session.user.id, function(user, models) {
             user.getServers().success(function(servers) {
                 res.render(
                     'servers',
-                    { servers: convertServersForView(servers) },
+                    {
+                        servers: convertServersForView(servers),
+                        pubkey: fs.readFileSync(config.keyfile)
+                    },
                     function(err, content) {
                         if (err) {
                             return sendError(res);
@@ -94,29 +92,24 @@ module.exports.apply = function(app) {
         }
 
         var path = req.body.path;
-        if (path === '' || path === undefined) {
+        if (path === undefined || path.trim() === '') {
             return sendError(res, 'Path must not be empty!');
         }
 
-        var pubkey = req.body.pubkey;
-        if (pubkey === '' || pubkey === undefined) {
-            return sendError(res, 'Pubkey must not be empty!');
+        path = path.trim();
+        if (path[path.length - 1] !== '/') {
+            path += '/';
         }
 
         getUserAndModels(req.session.user.id, function(user, models) {
-            var md5 = crypto.createHash('md5');
-            md5.update(pubkey);
-            var filename = md5.digest('hex');
-            fs.writeFileSync(getKeyPath(filename), pubkey);
-
             var server = models.Server.build({
                 username: username,
                 hostname: hostname,
-                path: path,
-                keyfile: filename
+                path: path
             });
 
             user.addServer(server).success(function() {
+                dependencies.serverManager.addServer(server);
                 sendServerList(res, user);
             }).error(function() {
                 sendError(res);
@@ -138,9 +131,7 @@ module.exports.apply = function(app) {
                 if (servers.length === 0) {
                     res.json({ type: 'error', content: 'Server not found!'});
                 }
-                var keyfile = servers[0].keyfile;
-                user.removeServer(servers[0]).success(function() {
-                    fs.unlink(getKeyPath(keyfile));
+                servers[0].destroy().success(function() {
                     sendServerList(res, user);
                 });
             });

@@ -5,7 +5,6 @@ if (servers.length > 0)
         th Host
         th User
         th Path
-        th PubKey
         th
     tbody
       each server in servers
@@ -13,7 +12,6 @@ if (servers.length > 0)
           td= server.hostname
           td= server.username
           td= server.path
-          td= server.pubkey
           td
             button.btn.btn-danger.server-delete-button(type="submit", data-server-id="#{server.id}") Delete
 else
