@@ -38,6 +38,26 @@ define(['jquery'], function($) {
                     }
                 });
             });
+
+            $('.server-status').livequery(function() {
+                var id = $(this).attr('data-server-id');
+                var this_ = this;
+                var updatefunc = function () {
+                    $.ajax({
+                        url: '/servers/status',
+                        data: { id: id },
+                        type: 'POST'
+                    }).always(function(data) {
+                        if (data && data.content) {
+                            $(this_).html(data.content);
+                        }
+                        this_.refreshTimer = setTimeout(updatefunc, 2000);
+                    });
+                };
+                updatefunc();
+            }, function() {
+                clearTimeout(this.refreshTimer);
+            });
         }
     };
 });

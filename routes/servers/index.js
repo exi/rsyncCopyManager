@@ -43,7 +43,7 @@ function sendServerList(res, user) {
     });
 }
 
-module.exports.apply = function(app, dependencies) {
+module.exports.apply = function(dependencies, app) {
     app.post('/servers', function(req, res) {
         database(function(err, models) {
             req.session.user.getServers().success(function(servers) {
@@ -51,7 +51,7 @@ module.exports.apply = function(app, dependencies) {
                     'servers',
                     {
                         servers: convertServersForView(servers),
-                        pubkey: fs.readFileSync(config.keyfile)
+                        pubkey: fs.readFileSync(config.pubkeyfile)
                     },
                     function(err, content) {
                         if (err) {
@@ -88,18 +88,21 @@ module.exports.apply = function(app, dependencies) {
         }
 
         database(function(err, models) {
-            var server = models.Server.build({
+            models.Server.create({
                 username: username,
                 hostname: hostname,
                 path: path
-            });
-
-            req.session.user.addServer(server).success(function() {
-                dependencies.serverManager.addServer(server);
-                sendServerList(res, req.session.user);
+            }).success(function(server) {
+                server.setUser(req.session.user).success(function() {
+                    sendServerList(res, req.session.user);
+                    dependencies.serverManager.addServer(server);
+                }).error(function() {
+                    sendError(res);
+                });
             }).error(function() {
                 sendError(res);
             });
+
         });
     });
 
@@ -117,11 +120,43 @@ module.exports.apply = function(app, dependencies) {
                 if (servers.length === 0) {
                     res.json({ type: 'error', content: 'Server not found!'});
                 }
-                dependencies.serverManager.delServer(servers[0].id);
-                servers[0].destroy().success(function() {
+                dependencies.serverManager.delServer(servers[0].id).then(function() {
                     sendServerList(res, req.session.user);
                 });
             });
         });
     });
+
+    app.post('/servers/status', function(req, res) {
+        if (!req.body || !req.body.id) {
+            return sendError(res);
+        }
+        database(function(err, models) {
+            req.session.user.getServers({
+                where: {
+                    id: req.body.id
+                }
+            }).success(function(servers) {
+                if (servers.length === 0) {
+                    res.json({ type: 'error', content: 'Server not found!'});
+                } else {
+                    dependencies.serverManager.getServerStatus(req.body.id).then(function(status) {
+                        var content = 'Idle';
+                        var msgs = [];
+                        if (status.fsCheckInProgress === true) {
+                            msgs.push('Scanning filesystem');
+                        }
+                        if (status.waitForClose === true) {
+                            msgs.push('Closing connection');
+                        }
+                        content = msgs.length === 0 ? content : msgs.join(', ');
+                        res.json({ type: 'success', content: content});
+                    }, function(status) {
+                        res.json({ type: 'eror', content: status});
+                    });
+                }
+            });
+        });
+    });
+
 };

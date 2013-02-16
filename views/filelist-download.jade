@@ -1,0 +1,9 @@
+.modal-header
+  button.close(type="button", data-dismiss="modal", aria-hidden="true") ×
+  h3#myModalLabel Modal header
+.modal-body
+  p Do you want to queue the download?
+  p #{path}
+.modal-footer
+  button.btn(data-dismiss="modal", aria-hidden="true") No
+  button.btn.btn-primary.filelist-download-confirm(data-dismiss="modal", data-filelist-path="#{path}") Yes

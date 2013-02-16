@@ -2,9 +2,10 @@
  * GET home page.
  */
 var servers = require('./servers');
+var filelist = require('./filelist');
 var database = require('../database.js');
 
-module.exports.apply = function(app, dependencies) {
+module.exports.apply = function(dependencies, app) {
     app.all('/login', function(req, res) {
         var renderdata = {
             title: 'rsyncCopyManager - Login'
@@ -67,5 +68,6 @@ module.exports.apply = function(app, dependencies) {
         });
     });
 
-    servers.apply(app, dependencies);
+    servers.apply(dependencies, app);
+    filelist.apply(dependencies, app);
 };

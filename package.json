@@ -6,7 +6,8 @@
       "express": "*"
     , "jade": "*"
     , "less-middleware": "*"
-    , "sequelize": "*"
+    , "sequelize": "git://github.com/sdepold/sequelize.git#master"
     , "lodash": "*"
+    , "node-promise": "*"
   }
 }

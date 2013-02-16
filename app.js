@@ -9,7 +9,9 @@ var express = require('express'),
     config = require('./config.js'),
     database = require('./database.js'),
     serverManager = require('./serverManager.js'),
-    lessMiddleware = require('less-middleware');
+    pathMapper = require('./pathMapper.js'),
+    lessMiddleware = require('less-middleware'),
+    eventEmitter = require('events').EventEmitter;
 
 var app = module.exports = express();
 
@@ -23,7 +25,7 @@ app.configure(function() {
     app.use(express.logger('dev'));
     app.use(express.bodyParser());
     app.use(express.methodOverride());
-    app.use(lessMiddleware({ src : __dirname + '/public', paths: [__dirname + '/vendor/twitter/bootstrap/less'] }));
+    app.use(lessMiddleware({ src : __dirname + '/public' }));
     app.use(express.static(__dirname + '/public'));
     app.use(app.router);
 });
@@ -38,9 +40,15 @@ app.configure('production', function() {
 
 // Routes
 
-routes.apply(app, {
-    serverManager: new serverManager()
-});
+var eventBus = new eventEmitter();
+var dependencies = {
+    eventBus: eventBus
+};
+
+dependencies.serverManager = new serverManager(dependencies);
+dependencies.pathMapper = new pathMapper(dependencies);
+
+routes.apply(dependencies, app);
 
 // sync db
 database(function() {});
