@@ -3,6 +3,7 @@ module.exports = {
     cookieName: 'rsyncCopyManager',
     port: 3000,
     keyfile: '/home/exi/.ssh/id_rsa.pub',
+    fs_check_interval: 2,
     db: {
         name: 'rsyncCopyManager',
         user: 'root',

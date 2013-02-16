@@ -106,24 +106,31 @@ var filelist = module.exports.filelist = function (options) {
         var process = spawn('rsync', args);
         var self = this;
         var filelistregex = /([d\-])[rwx\-]{9}\s+(\d+)\s+\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}\s(.*)/;
-        var filelist = [];
+        var stdoutdata = '';
 
         process.stdout.on('data', function (data) {
-            if (filelistregex.test(data)) {
-                var m = filelistregex.exec(data);
-                filelist.push({
-                    isDir: m[1] === 'd',
-                    size: m[2],
-                    path: m[3]
-                });
-            }
+            stdoutdata += data;
         });
 
         process.stderr.on('data', function (data) {
+            data = 'err: ' + data;
         });
 
         process.on('exit', function (code) {
             if (code === 0) {
+                var filelist = [];
+                var lines = stdoutdata.split('\n');
+
+                lines.forEach(function(line) {
+                    if (filelistregex.test(line)) {
+                        var m = filelistregex.exec(line);
+                        filelist.push({
+                            isDir: m[1] === 'd',
+                            size: m[2],
+                            path: '' + m[3]
+                        });
+                    }
+                });
                 self.emit('finish', filelist);
             } else {
                 self.emit('error', code);

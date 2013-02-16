@@ -28,20 +28,6 @@ function convertServersForView(servers) {
     return ret;
 }
 
-function getUserAndModels(userid, cb) {
-    database(function(err, models) {
-        models.User.find({
-            where: {
-                id: userid
-            }
-        }).success(function(user) {
-            cb(user, models);
-        }).error(function() {
-            sendError(res);
-        });
-    });
-}
-
 function sendServerList(res, user) {
     user.getServers().success(function(servers) {
         servers = convertServersForView(servers);
@@ -59,8 +45,8 @@ function sendServerList(res, user) {
 
 module.exports.apply = function(app, dependencies) {
     app.post('/servers', function(req, res) {
-        getUserAndModels(req.session.user.id, function(user, models) {
-            user.getServers().success(function(servers) {
+        database(function(err, models) {
+            req.session.user.getServers().success(function(servers) {
                 res.render(
                     'servers',
                     {
@@ -101,16 +87,16 @@ module.exports.apply = function(app, dependencies) {
             path += '/';
         }
 
-        getUserAndModels(req.session.user.id, function(user, models) {
+        database(function(err, models) {
             var server = models.Server.build({
                 username: username,
                 hostname: hostname,
                 path: path
             });
 
-            user.addServer(server).success(function() {
+            req.session.user.addServer(server).success(function() {
                 dependencies.serverManager.addServer(server);
-                sendServerList(res, user);
+                sendServerList(res, req.session.user);
             }).error(function() {
                 sendError(res);
             });
@@ -122,8 +108,8 @@ module.exports.apply = function(app, dependencies) {
             return sendError(res);
         }
 
-        getUserAndModels(req.session.user.id, function(user, models) {
-            user.getServers({
+        database(function(err, models) {
+            req.session.user.getServers({
                 where: {
                     id: req.body.id
                 }
@@ -131,8 +117,9 @@ module.exports.apply = function(app, dependencies) {
                 if (servers.length === 0) {
                     res.json({ type: 'error', content: 'Server not found!'});
                 }
+                dependencies.serverManager.delServer(servers[0].id);
                 servers[0].destroy().success(function() {
-                    sendServerList(res, user);
+                    sendServerList(res, req.session.user);
                 });
             });
         });

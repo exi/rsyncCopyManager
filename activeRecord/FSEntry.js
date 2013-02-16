@@ -4,5 +4,8 @@ module.exports = function(sequelize, DataTypes) {
         path: { type: DataTypes.TEXT, allowNull: false },
         size: { type: DataTypes.INTEGER, allowNull: false },
         isDir: { type: DataTypes.BOOLEAN, allowNull: false }
+    }, {
+        timestamps: false,
+        paranoid: false
     });
 };

@@ -12,6 +12,14 @@ var ServerManager = module.exports = function() {
         };
     };
 
+    api.delServer = function(serverId) {
+        if (servers.hasOwnProperty(serverId)) {
+            var server = servers[serverId].manager;
+            server.close();
+            delete servers[serverId];
+        }
+    };
+
     database(function(err, models) {
         if (err) {
             throw err;

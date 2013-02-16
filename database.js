@@ -11,7 +11,7 @@ var FSEntry = sequelize.import(__dirname + '/activeRecord/FSEntry');
 User.hasMany(Server, { as: 'Servers' });
 User.hasMany(Transfer, { as: 'Transfers' });
 Server.hasMany(Transfer, { as: 'Transfers' });
-Server.hasMany(FSEntry, { as: 'FSEntrys' });
+Server.hasMany(FSEntry, { as: 'FSEntries' });
 FSEntry.belongsTo(Server);
 Transfer.belongsTo(User);
 Transfer.belongsTo(Server);
@@ -44,3 +44,5 @@ module.exports = function(cb) {
         cb(null, models);
     }
 };
+
+module.exports.chain = require('sequelize').Utils.QueryChainer;

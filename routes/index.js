@@ -37,7 +37,16 @@ module.exports.apply = function(app, dependencies) {
 
     app.all('*', function(req, res, next) {
         if (req.session.user) {
-            next();
+            database(function(err, models) {
+                models.User.find({
+                    where: {
+                        id: req.session.user.id
+                    }
+                }).success(function(user) {
+                    req.session.user = user;
+                    next();
+                });
+            });
         } else {
             res.redirect('/login');
         }
