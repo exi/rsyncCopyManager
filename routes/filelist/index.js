@@ -36,6 +36,10 @@ module.exports.apply = function(dependencies, app) {
         return ext;
     }
 
+    function fseSortFunction(a, b) {
+        return a.name.localeCompare(b.name);
+    }
+
     app.post('/filelist/getDir', function(req, res) {
         if (req.body.dir !== undefined) {
             var dir = decodeURIComponent(req.body.dir);
@@ -62,6 +66,9 @@ module.exports.apply = function(dependencies, app) {
                         }
                     }
                 }
+
+                dirs.sort(fseSortFunction);
+                files.sort(fseSortFunction);
 
                 res.render('filelist-tree', { dirs: dirs, files: files });
             }, function(err) {
