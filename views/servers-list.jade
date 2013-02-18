@@ -15,6 +15,6 @@ if (servers.length > 0)
           td= server.path
           td.server-status(data-server-id="#{server.id}")
           td
-            button.btn.btn-danger.server-delete-button(type="submit", data-server-id="#{server.id}") Delete
+            button.btn.btn-danger.server-delete-button(type="button", data-loading-text="Deleting...", data-server-id="#{server.id}") Delete
 else
   p You did not add any servers yet.

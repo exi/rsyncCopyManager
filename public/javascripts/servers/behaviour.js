@@ -28,6 +28,7 @@ define(['jquery'], function($) {
 
             $('.server-delete-button').livequery('click', function(event) {
                 var id = $(this).attr('data-server-id');
+                $(this).addClass('loading');
                 $.ajax({
                     url: '/servers/del',
                     data: { id: id },

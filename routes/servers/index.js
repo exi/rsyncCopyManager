@@ -38,8 +38,8 @@ function sendServerList(res, user) {
                 res.json({ type: 'success', content: content });
             }
         );
-    }).error(function() {
-        sendError(res);
+    }).error(function(err) {
+        sendError(res, err);
     });
 }
 
@@ -55,13 +55,13 @@ module.exports.apply = function(dependencies, app) {
                     },
                     function(err, content) {
                         if (err) {
-                            return sendError(res);
+                            return sendError(res, err);
                         }
                         res.json({content: content});
                     }
                 );
-            }).error(function() {
-                sendError(res);
+            }).error(function(err) {
+                sendError(res, err);
             });
         });
     });
@@ -96,11 +96,11 @@ module.exports.apply = function(dependencies, app) {
                 server.setUser(req.session.user).success(function() {
                     sendServerList(res, req.session.user);
                     dependencies.serverManager.addServer(server);
-                }).error(function() {
-                    sendError(res);
+                }).error(function(err) {
+                    sendError(res, err);
                 });
-            }).error(function() {
-                sendError(res);
+            }).error(function(err) {
+                sendError(res, err);
             });
 
         });
@@ -108,7 +108,7 @@ module.exports.apply = function(dependencies, app) {
 
     app.post('/servers/del', function(req, res) {
         if (!req.body || !req.body.id) {
-            return sendError(res);
+            return sendError(res, 'Invalid request!');
         }
 
         database(function(err, models) {
@@ -129,7 +129,7 @@ module.exports.apply = function(dependencies, app) {
 
     app.post('/servers/status', function(req, res) {
         if (!req.body || !req.body.id) {
-            return sendError(res);
+            return sendError(res, 'Invalid request!');
         }
         database(function(err, models) {
             req.session.user.getServers({
