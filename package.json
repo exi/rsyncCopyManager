@@ -9,5 +9,6 @@
     , "sequelize": "git://github.com/sdepold/sequelize.git#master"
     , "lodash": "*"
     , "node-promise": "*"
+    , "threads_a_gogo": "git://github.com/exi/node-threads-a-gogo.git#master"
   }
 }

@@ -3,207 +3,71 @@ var database = require('./database.js');
 var config = require('./config.js');
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
+var child_process = require('child_process');
 
-var Server = module.exports = function(dependencies, modelInstance) {
-
+var Server = module.exports = function(dependencies, serverId) {
     var api = {};
-    var stop = false;
-    var checkTimer;
-    var fsCheckInProgress = false;
-    var consolePrefix = modelInstance.hostname + ': ';
-    var checkFileListPromise = null;
-    var waitForClose = false;
+    var startupPromise = new Promise();
+    var promises = {};
+    var msgid = 0;
 
-    function resetTimer() {
-        stopTimer();
-        if (stop) {
-            return;
+    var worker = child_process.fork(__dirname + '/server-worker.js');
+
+    worker.on('message', function(data) {
+        console.log('response: ');
+        console.log(data);
+        if (data.id !== undefined && promises[data.id]) {
+            if (data.type === 'error') {
+                promises[data.id].reject(data.data);
+            } else {
+                promises[data.id].resolve(data.data);
+            }
+            delete promises[data.id];
+        } else if (data.command === 'event' && data.topic !== undefined) {
+            dependencies.eventBus.emit(data.topic, data.data);
         }
-        checkTimer = setTimeout(periodicCheck, 1000);
-    }
+    });
 
-    function stopTimer() {
-        clearTimeout(checkTimer);
-    }
-
-    function setStopIndicators() {
-        console.log('closing server ' + modelInstance.id);
-        stopTimer();
-        stop = true;
-        waitForClose = true;
+    function sendMessage(data, callback) {
+        var id = msgid++;
+        var p = new Promise();
+        if (callback) {
+            p.then(callback);
+        }
+        promises[id] = p;
+        console.log('sending message ');
+        worker.send({
+            id: id,
+            data: data
+        });
     }
 
     api.closeAndDelete = function() {
         var p = new Promise();
-
-        api.close().then(function() {
-            modelInstance.getFSEntries().success(function(fses) {
-                var chain = new database.chain();
-                fses.forEach(function(fse) {
-                    chain.add(fse.destroy());
-                });
-                chain.run().success(function() {
-                    modelInstance.destroy().success(function() {
-                        p.resolve();
-                    });
-                });
+        startupPromise.then(function() {
+            sendMessage({ command: 'closeAndDelete' }, function() {
+                worker.kill();
+                p.resolve();
             });
         });
-
-        return p;
-    };
-
-    api.close = function() {
-        var p = new Promise();
-        setStopIndicators();
-
-        var promises = [];
-        if (checkFileListPromise !== null) {
-            promises.push(checkFileListPromise);
-        }
-
-        All(promises).then(function() {
-            waitForClose = false;
-            p.resolve();
-        });
-
         return p;
     };
 
     api.getStatus = function() {
         var p = new Promise();
-
-        status = { };
-
-        if (fsCheckInProgress) {
-            status.fsCheckInProgress = true;
-        }
-
-        if (waitForClose) {
-            status.waitForClose = true;
-        }
-
-        p.resolve(status);
+        startupPromise.then(function() {
+            sendMessage({ command: 'getStatus' }, function(data) {
+                p.resolve(data.status);
+            });
+        });
         return p;
     };
 
-    function startedFsCheck() {
-        fsCheckInProgress = true;
-        checkFileListPromise = new Promise();
-    }
-
-    function finishedFsCheck() {
-        fsCheckInProgress = false;
-        checkFileListPromise.resolve();
-        checkFileListPromise = null;
-    }
-
-    function resetFSCheckTime() {
-        modelInstance.last_filelist_update = new Date();
-        modelInstance.save().success(function() {
-            finishedFsCheck();
-        }).error(function() {
-            finishedFsCheck();
-        });
-    }
-
-    function checkFileList() {
-        if (fsCheckInProgress || stop) {
-            return;
-        }
-
-        console.log('checking files for server: ' + modelInstance.id);
-        startedFsCheck();
-
-        var r = new rsync.filelist({
-            keyfile: config.keyfile,
-            username: modelInstance.username,
-            host: modelInstance.hostname,
-            src: modelInstance.path
-        });
-
-        r.on('error', function(err) {
-            console.error(consolePrefix + ' fscheck failed:');
-            console.error(err);
-            finishedFsCheck();
-        });
-
-        r.on('finish', function(filelist) {
-            console.log(consolePrefix + 'filelist');
-
-            database(function(err, models) {
-                if (err) {
-                    console.error(err);
-                    finishedFsCheck();
-                    return;
-                }
-
-                var paths = [];
-                filelist.forEach(function(fse) {
-                    paths.push(fse.path);
-                });
-
-                console.log('my instance: ' + modelInstance.id);
-                modelInstance.getFSEntries().success(function(matches) {
-                    var fsentries = matches;
-                    var pathmap = {};
-
-                    matches.forEach(function(fse) {
-                        pathmap[fse.path] = fse;
-                    });
-
-                    var promises = [];
-
-                    filelist.forEach(function(fse) {
-                        if (!pathmap.hasOwnProperty(fse.path.trim())) {
-                            console.log('add ' + fse.path);
-                            var entry = models.FSEntry.build(fse);
-                            var p = new Promise();
-                            promises.push(p);
-                            entry.save().success(function(entry) {
-                                entry.setServer(modelInstance).success(function(fse) {
-                                    dependencies.eventBus.emit('fs-add', fse);
-                                    p.resolve();
-                                });
-                            });
-                        } else {
-                            delete pathmap[fse.path];
-                        }
-                    });
-
-
-                    for (var m in pathmap) {
-                        if (pathmap.hasOwnProperty(m)) {
-                            (function(s, path) {
-                                var p = new Promise();
-                                promises.push(p);
-                                s.destroy().success(function() {
-                                    p.resolve();
-                                    console.log('del ' + path);
-                                    dependencies.eventBus.emit('fs-del', path);
-                                });
-                            })(pathmap[m], pathmap[m].path);
-                        }
-                    }
-
-                    All(promises).then(resetFSCheckTime, resetFSCheckTime);
-                });
-            });
-        });
-    }
-
-    function periodicCheck() {
-        var fstime = modelInstance.last_filelist_update;
-        var checkintervall = config.fs_check_interval * 60 * 1000;
-
-        if (!fstime || fstime === null || fstime.getTime() + checkintervall < Date.now()) {
-            checkFileList();
-        }
-
-        resetTimer();
-    }
-
-    resetTimer();
+    console.log('starting worker...');
+    sendMessage({ command: 'start', serverId: serverId }, function(data) {
+        console.log('worker started');
+        startupPromise.resolve();
+    });
 
     return api;
 };

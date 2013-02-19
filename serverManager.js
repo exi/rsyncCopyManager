@@ -9,7 +9,7 @@ var ServerManager = module.exports = function(dependencies) {
     api.addServer = function(server) {
         servers[server.id] = {
             modelInstance: server,
-            manager: new Server(dependencies, server)
+            manager: new Server(dependencies, server.id)
         };
     };
 
@@ -20,6 +20,7 @@ var ServerManager = module.exports = function(dependencies) {
             var server = servers[serverId].manager;
             server.closeAndDelete().then(function() {
                 delete servers[serverId];
+                console.log('server removed');
                 dependencies.eventBus.emit('server-removed');
                 p.resolve();
             });
