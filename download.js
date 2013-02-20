@@ -5,6 +5,9 @@ var All = require('node-promise').all;
 var config = require('./config.js');
 var fs = require('fs');
 var wrench = require('wrench');
+var events = require('events');
+var util = require('util');
+var Token = require('./serverQueue.js').Token;
 
 var Download = module.exports = function(dependencies, modelInstance) {
     var api = {};
@@ -12,11 +15,13 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var downloading = false;
     var serverOffline = false;
     var downloadStatus = null;
-    var complete = false;
     var process;
     var stop = false;
     var exitPromise;
     var downloadTimer;
+    var token = null;
+    var queued = false;
+    var noMatchingServer = false;
 
     api.getStatus = function() {
         var p = new Promise();
@@ -35,7 +40,15 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 status.serverOffline = true;
             }
 
-            if (complete) {
+            if (noMatchingServer) {
+                status.noMatchingServer = true;
+            }
+
+            if (queued) {
+                status.queued = true;
+            }
+
+            if (modelInstance.complete === true) {
                 status.complete = true;
             }
 
@@ -50,6 +63,10 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
         var p = new Promise();
         var deletePromise = new Promise();
+
+        if (token !== null) {
+            token.emit('finished');
+        }
 
         if (exitPromise) {
             console.log('awiting for exitPromise');
@@ -89,13 +106,22 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
         console.log('starting download');
         exitPromise = new Promise();
-        process = new rsync.download({
+        queued = false;
+        downloading = true;
+
+        var options = {
             keyfile: config.keyfile,
             username: server.username,
             host: server.hostname,
             src: server.path + '/' + modelInstance.path,
             dest: config.downloadDir + '/'
-        });
+        };
+
+        if (modelInstance.bwlimit !== null) {
+            options.bwlimit = modelInstance.bwlimit;
+        }
+
+        process = new rsync.download(options);
 
         process.on('progress', function(data) {
             serverOffline = false;
@@ -107,17 +133,17 @@ var Download = module.exports = function(dependencies, modelInstance) {
         });
 
         process.on('finish', function() {
-            complete = true;
             stopDownload();
-            console.log('finished');
             downloadStatus.rate = 0;
-            downloadStatus.percent = 100;
-            modelInstance.progress = 100;
+            downloadStatus.percent = modelInstance.progress = 100;
             modelInstance.complete = 1;
             modelInstance.save();
             process = null;
             exitPromise.resolve();
             exitPromise = null;
+            console.log('finished');
+            token.emit('finished');
+            token = null;
         });
 
         process.on('error', function(code) {
@@ -132,12 +158,12 @@ var Download = module.exports = function(dependencies, modelInstance) {
     }
 
     function resetDownloadTimer() {
-        if (complete) {
+        if (modelInstance.complete) {
             return;
         }
 
         clearTimeout(downloadTimer);
-        downloadtimer = setTimeout(startDownload, 10000);
+        downloadtimer = setTimeout(startDownload, config.download_retry_interval * 60 * 1000);
     }
 
     function stopDownload() {
@@ -149,27 +175,45 @@ var Download = module.exports = function(dependencies, modelInstance) {
             return;
         }
         startupPromise.then(function(models) {
-            if (downloading === false) {
-                downloading = true;
-                models.FSEntry.find({
-                    where: {
-                        path: modelInstance.path
-                    }
-                }).success(function(fse) {
-                    if (stop) {
-                        return stopDownload();
-                    }
-                    fse.getServer().success(function(server) {
+            models.FSEntry.find({
+                where: {
+                    path: modelInstance.path
+                }
+            }).success(function(fse) {
+                if (stop) {
+                    return stopDownload();
+                }
+
+                if (fse === null) {
+                    stopDownload();
+                    noMatchingServer = true;
+                    return resetDownloadTimer();
+                }
+
+                noMatchingServer = false;
+
+                fse.getServer().success(function(server) {
+                    token = new Token(function() {
                         download(server);
-                    }).error(function() {
-                        console.log('Server not found');
-                        return stopDownload();
+                    });
+                    queued = true;
+                    dependencies.serverQueue.queue(server.id, token);
+                    token.on('rejected', function() {
+                        queued = false;
+                        if (process) {
+                            process.kill();
+                        } else {
+                            startDownload();
+                        }
                     });
                 }).error(function() {
-                    console.log('path not found');
+                    console.log('Server not found');
                     return stopDownload();
                 });
-            }
+            }).error(function() {
+                console.log('path not found');
+                return stopDownload();
+            });
         });
     }
 
@@ -185,8 +229,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
             percent: modelInstance.progress
         };
         startupPromise.then(startDownload);
-    } else {
-        complete = true;
     }
 
     return api;

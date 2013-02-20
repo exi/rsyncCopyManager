@@ -22,7 +22,7 @@ var ServerManager = module.exports = function(dependencies) {
             var server = servers[serverId].manager;
             server.closeAndDelete().then(function() {
                 delete servers[serverId];
-                console.log('server removed');
+                dependencies.eventBus.emit('server-removed', serverId);
                 p.resolve();
             });
         } else {

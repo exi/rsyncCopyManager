@@ -112,6 +112,14 @@ module.exports.apply = function(dependencies, app) {
                     msgs.push('Server offline');
                 }
 
+                if (status.noMatchingServer) {
+                    msgs.push('No matching server found');
+                }
+
+                if (status.queued) {
+                    msgs.push('Queued');
+                }
+
                 content.status = msgs.length > 0 ? msgs.join(',') : content.status;
                 res.json({ type: 'success', content: content });
             }, function(status) {

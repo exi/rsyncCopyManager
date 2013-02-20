@@ -6,16 +6,9 @@ var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
 
 var logfd = fs.openSync(config.logdir + '/server.log', 'a+');
-function log(msg) {
-    msg.forEach(function(msg) {
-        fs.writeSync(logfd, require('util').inspect(msg));
-    });
-    fs.writeSync(logfd, '\n');
-}
-
-log(['worker init']);
 
 var Server = function(modelInstance) {
+    console.log('starting server worker ' + modelInstance.hostname + ' ' + modelInstance.path);
     var api = {};
     var stop = false;
     var checkTimer;
@@ -24,6 +17,7 @@ var Server = function(modelInstance) {
     var checkFileListPromise = null;
     var waitForClose = false;
     var serverOffline;
+    var rsyncp;
 
     function resetTimer() {
         stopTimer();
@@ -38,7 +32,7 @@ var Server = function(modelInstance) {
     }
 
     function setStopIndicators() {
-        log(['closing server ' + modelInstance.id]);
+        console.log('closing server ' + modelInstance.id);
         stopTimer();
         stop = true;
         waitForClose = true;
@@ -127,27 +121,25 @@ var Server = function(modelInstance) {
             return;
         }
 
-        log(['checking files for server: ' + modelInstance.id]);
+        console.log('checking files for server: ' + modelInstance.id);
         startedFsCheck();
 
         serverOffline = false;
-        var r = new rsync.filelist({
+        rsyncp = new rsync.filelist({
             keyfile: config.keyfile,
             username: modelInstance.username,
             host: modelInstance.hostname,
             src: modelInstance.path
         });
 
-        r.on('error', function(err) {
+        rsyncp.on('error', function(err) {
             console.error(consolePrefix + ' fscheck failed:');
             console.error(err);
             serverOffline = true;
             finishedFsCheck();
         });
 
-        r.on('finish', function(filelist) {
-            log([consolePrefix + 'filelist']);
-
+        rsyncp.on('finish', function(filelist) {
             database(function(err, models) {
                 if (err) {
                     console.error(err);
@@ -160,7 +152,6 @@ var Server = function(modelInstance) {
                     paths.push(fse.path);
                 });
 
-                log(['my instance: ' + modelInstance.id]);
                 modelInstance.getFSEntries().success(function(matches) {
                     var fsentries = matches;
                     var pathmap = {};
@@ -174,7 +165,7 @@ var Server = function(modelInstance) {
 
                     filelist.forEach(function(fse) {
                         if (!pathmap.hasOwnProperty(fse.path.trim())) {
-                            log(['add ' + fse.path]);
+                            console.log('add ' + fse.path);
                             var entry = models.FSEntry.build(fse);
                             var p = new Promise();
                             promises.push(p);
@@ -198,7 +189,7 @@ var Server = function(modelInstance) {
                                 change = true;
                                 s.destroy().success(function() {
                                     p.resolve();
-                                    log(['del ' + path]);
+                                    console.log('del ' + path);
                                 });
                             })(pathmap[m], pathmap[m].path);
                         }
@@ -214,10 +205,13 @@ var Server = function(modelInstance) {
             });
         });
 
-        process.on('disconnect', function() {
-            r.kill();
-        });
     }
+
+    process.on('disconnect', function() {
+        if (rsyncp && rsyncp.kill) {
+            rsyncp.kill();
+        }
+    });
 
     function periodicCheck() {
         var fstime = modelInstance.last_filelist_update;
@@ -238,11 +232,9 @@ var Server = function(modelInstance) {
 var instance = null;
 var startupPromise = new Promise();
 
-log(['set onmessage']);
 process.on('message', function(data) {
 
     var id = data.id;
-    log(['got message: ', data]);
 
     function success(data) {
         var msg = {
@@ -250,7 +242,6 @@ process.on('message', function(data) {
             type: 'success',
             data: data
         };
-        log(['msg: ', msg]);
         process.send(msg);
     }
 
@@ -262,7 +253,6 @@ process.on('message', function(data) {
                 if (err) {
                     throw err;
                 }
-                log(['start serverid ' + data.serverId]);
                 models.Server.find({
                     where: {
                         id: data.serverId
@@ -278,7 +268,6 @@ process.on('message', function(data) {
         if (data.command === 'getStatus') {
             startupPromise.then(function() {
                 instance.getStatus().then(function(status) {
-                    log(['sending status: ', status]);
                     success({ status: status });
                 });
             });
@@ -297,7 +286,7 @@ process.on('message', function(data) {
 process.on('disconnect', function() {
     if (instance !== null) {
         instance.close().then(function() {
-            log(['exiting due to disconnect']);
+            console.log('exiting server worker due to disconnect');
             process.exit();
         });
     }

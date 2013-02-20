@@ -4,6 +4,7 @@ module.exports = function(sequelize, DataTypes) {
         username: { type: DataTypes.TEXT, allowNull: false },
         hostname: { type: DataTypes.TEXT, allowNull: false },
         path: { type: DataTypes.TEXT, allowNull: false },
+        bwlimit: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
         last_filelist_update: { type: DataTypes.DATE, allowNull: true },
         last_seen: { type: DataTypes.DATE, allowNull: true }
     });

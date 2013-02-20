@@ -14,8 +14,6 @@ var Server = module.exports = function(dependencies, serverId) {
     var worker = child_process.fork(__dirname + '/server-worker.js');
 
     worker.on('message', function(data) {
-        console.log('response: ');
-        console.log(data);
         if (data.id !== undefined && promises[data.id]) {
             if (data.type === 'error') {
                 promises[data.id].reject(data.data);
@@ -35,7 +33,6 @@ var Server = module.exports = function(dependencies, serverId) {
             p.then(callback);
         }
         promises[id] = p;
-        console.log('sending message ');
         worker.send({
             id: id,
             data: data
