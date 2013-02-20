@@ -1,9 +1,9 @@
 .modal-header
   button.close(type="button", data-dismiss="modal", aria-hidden="true") ×
-  h3 Download?
+  h3 Delete?
 .modal-body
-  p Do you want to queue the download?
+  p Do you want to delete the download?
   p #{path}
 .modal-footer
   button.btn(data-dismiss="modal", aria-hidden="true") No
-  button.btn.btn-primary.filelist-download-confirm(data-dismiss="modal", data-filelist-path="#{path}") Yes
+  button.btn.btn-primary.download-delete-confirm(data-dismiss="modal", data-download-id="#{id}") Yes

@@ -6,6 +6,7 @@ module.exports = {
     keyfile: '/home/exi/.ssh/id_rsa',
     fs_check_interval: 2,
     logdir: __dirname + '/logs/',
+    downloadDir: __dirname + '/download/',
     db: {
         name: 'rsyncCopyManager',
         user: 'root',

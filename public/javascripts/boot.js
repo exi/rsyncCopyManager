@@ -15,6 +15,7 @@ require([
     'menu/behaviour',
     'servers/behaviour',
     'filelist/behaviour',
+    'downloads/behaviour',
     'domReady',
     'bootstrap',
     'liveQuery',
@@ -25,12 +26,14 @@ require([
     menuBehaviour,
     serverBehaviour,
     filelistBehaviour,
+    downloadsBehaviour,
     domReady
 ) {
     domReady(function() {
         menuBehaviour.apply();
         serverBehaviour.apply();
         filelistBehaviour.apply();
+        downloadsBehaviour.apply();
         $('.menu-downloads-link').trigger('click');
     });
 });

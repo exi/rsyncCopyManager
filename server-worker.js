@@ -1,5 +1,4 @@
 var fs = require('fs');
-var events = require('events');
 var rsync = require('./rsync');
 var database = require('./database.js');
 var config = require('./config.js');
@@ -24,6 +23,7 @@ var Server = function(modelInstance) {
     var consolePrefix = modelInstance.hostname + ': ';
     var checkFileListPromise = null;
     var waitForClose = false;
+    var serverOffline;
 
     function resetTimer() {
         stopTimer();
@@ -47,7 +47,7 @@ var Server = function(modelInstance) {
     api.closeAndDelete = function() {
         var p = new Promise();
 
-        close().then(function() {
+        api.close().then(function() {
             modelInstance.getFSEntries().success(function(fses) {
                 var chain = new database.chain();
                 fses.forEach(function(fse) {
@@ -64,7 +64,7 @@ var Server = function(modelInstance) {
         return p;
     };
 
-    function close() {
+    api.close = function() {
         var p = new Promise();
         setStopIndicators();
 
@@ -79,7 +79,7 @@ var Server = function(modelInstance) {
         });
 
         return p;
-    }
+    };
 
     api.getStatus = function() {
         var p = new Promise();
@@ -92,6 +92,10 @@ var Server = function(modelInstance) {
 
         if (waitForClose) {
             status.waitForClose = true;
+        }
+
+        if (serverOffline) {
+            status.serverOffline = true;
         }
 
         p.resolve(status);
@@ -126,6 +130,7 @@ var Server = function(modelInstance) {
         log(['checking files for server: ' + modelInstance.id]);
         startedFsCheck();
 
+        serverOffline = false;
         var r = new rsync.filelist({
             keyfile: config.keyfile,
             username: modelInstance.username,
@@ -136,6 +141,7 @@ var Server = function(modelInstance) {
         r.on('error', function(err) {
             console.error(consolePrefix + ' fscheck failed:');
             console.error(err);
+            serverOffline = true;
             finishedFsCheck();
         });
 
@@ -164,6 +170,7 @@ var Server = function(modelInstance) {
                     });
 
                     var promises = [];
+                    var change = false;
 
                     filelist.forEach(function(fse) {
                         if (!pathmap.hasOwnProperty(fse.path.trim())) {
@@ -171,9 +178,9 @@ var Server = function(modelInstance) {
                             var entry = models.FSEntry.build(fse);
                             var p = new Promise();
                             promises.push(p);
+                            change = true;
                             entry.save().success(function(entry) {
                                 entry.setServer(modelInstance).success(function(fse) {
-                                    process.send({ command: 'event', topic: 'fs-add', data: fse });
                                     p.resolve();
                                 });
                             });
@@ -188,18 +195,27 @@ var Server = function(modelInstance) {
                             (function(s, path) {
                                 var p = new Promise();
                                 promises.push(p);
+                                change = true;
                                 s.destroy().success(function() {
                                     p.resolve();
                                     log(['del ' + path]);
-                                    process.send({ command: 'event', topic: 'fs-del', data: path });
                                 });
                             })(pathmap[m], pathmap[m].path);
                         }
                     }
 
-                    All(promises).then(resetFSCheckTime, resetFSCheckTime);
+                    All(promises).then(function() {
+                        if (change) {
+                            process.send({ command: 'event', topic: 'fs-change' });
+                        }
+                        resetFSCheckTime();
+                    }, resetFSCheckTime);
                 });
             });
+        });
+
+        process.on('disconnect', function() {
+            r.kill();
         });
     }
 
@@ -275,5 +291,14 @@ process.on('message', function(data) {
                 });
             });
         }
+    }
+});
+
+process.on('disconnect', function() {
+    if (instance !== null) {
+        instance.close().then(function() {
+            log(['exiting due to disconnect']);
+            process.exit();
+        });
     }
 });

@@ -7,10 +7,12 @@ var ServerManager = module.exports = function(dependencies) {
     var api = {};
 
     api.addServer = function(server) {
-        servers[server.id] = {
-            modelInstance: server,
-            manager: new Server(dependencies, server.id)
-        };
+        if (server && server.id) {
+            servers[server.id] = {
+                model: server,
+                manager: new Server(dependencies, server.id)
+            };
+        }
     };
 
     api.delServer = function(serverId) {
@@ -21,7 +23,6 @@ var ServerManager = module.exports = function(dependencies) {
             server.closeAndDelete().then(function() {
                 delete servers[serverId];
                 console.log('server removed');
-                dependencies.eventBus.emit('server-removed');
                 p.resolve();
             });
         } else {
@@ -34,7 +35,9 @@ var ServerManager = module.exports = function(dependencies) {
     api.getServerStatus = function(serverId) {
         var p = new Promise();
         if (servers.hasOwnProperty(serverId)) {
-            servers[serverId].manager.getStatus().then(p.resolve);
+            servers[serverId].manager.getStatus().then(function(status) {
+                p.resolve(status);
+            });
         } else {
             p.reject('Server not active.');
         }

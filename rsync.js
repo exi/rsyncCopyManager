@@ -4,6 +4,11 @@ var util = require('util');
 var _ = require('lodash');
 var util = require('util');
 var events = require('events');
+var Promise = require('node-promise').Promise;
+
+function escapeSrc(src) {
+    return '"' + src + '"';
+}
 
 function buildargs(options, mandatory) {
     options = options || {};
@@ -19,6 +24,7 @@ function buildargs(options, mandatory) {
 
     args.push('--rsh=ssh -i"' + options.keyfile + '" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no');
     args.push('--recursive');
+    args.push('--timeout=120');
     if (options.filelist !== true) {
         args.push('--partial');
         args.push('--progress');
@@ -42,7 +48,7 @@ function buildargs(options, mandatory) {
         args.push('--bwlimit=' + options.bwlimit);
     }
 
-    var src = options.username + '@' + options.host + ':' + options.src;
+    var src = options.username + '@' + options.host + ':' + escapeSrc(options.src);
 
     args.push(src);
 
@@ -55,13 +61,15 @@ function buildargs(options, mandatory) {
     return args;
 }
 
-var transfer = module.exports.transfer = function (options) {
+var download = module.exports.download = function (options) {
     events.EventEmitter.call(this);
 
     var args = buildargs(options, ['username', 'host', 'src', 'dest', 'keyfile']);
+    var process;
+    var exitPromise = new Promise();
 
     try {
-        var process = spawn('rsync', args);
+        process = spawn('rsync', args);
         var progressregex = /\s*(\d+)\s+(\d+)%\s+(\d*\.*\d+[a-zA-Z]B\/s)\s*(\d+:\d+:\d+)/;
         var self = this;
 
@@ -69,9 +77,9 @@ var transfer = module.exports.transfer = function (options) {
             if (progressregex.test(data)) {
                 var m = progressregex.exec(data);
                 self.emit('progress', {
-                    transferred: m[1],
+                    bytes: m[1],
                     percent: m[2],
-                    speed: m[3],
+                    rate: m[3],
                     eta: m[4]
                 });
             }
@@ -90,7 +98,21 @@ var transfer = module.exports.transfer = function (options) {
     } catch (error) {
         this.emit('error', error);
     }
+
+    this.kill = function() {
+        if (process && process.kill) {
+            console.log('killing rsync');
+            process.kill();
+        }
+        exitPromise.then(function() {
+            p.resolve();
+        });
+
+        return exitPromise;
+    };
 };
+
+util.inherits(download, events.EventEmitter);
 
 var filelist = module.exports.filelist = function (options) {
     events.EventEmitter.call(this);
@@ -101,9 +123,11 @@ var filelist = module.exports.filelist = function (options) {
     options.filelist = true;
 
     var args = buildargs(options, ['username', 'host', 'src', 'keyfile']);
+    var process;
+    var exitPromise = new Promise();
 
     try {
-        var process = spawn('rsync', args);
+        process = spawn('rsync', args);
         var self = this;
         var filelistregex = /([d\-])[rwx\-]{9}\s+(\d+)\s+\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}\s(.*)/;
         var stdoutdata = '';
@@ -135,10 +159,19 @@ var filelist = module.exports.filelist = function (options) {
             } else {
                 self.emit('error', code);
             }
+            exitPromise.resolve();
         });
     } catch (error) {
         this.emit('error', error);
+        exitPromise.resolve();
     }
+
+    this.kill = function() {
+        console.log('killing rsync');
+        if (process && process.kill) {
+            process.kill();
+        }
+    };
 };
 
 util.inherits(filelist, events.EventEmitter);

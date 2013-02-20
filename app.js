@@ -9,6 +9,7 @@ var express = require('express'),
     config = require('./config.js'),
     database = require('./database.js'),
     serverManager = require('./serverManager.js'),
+    downloadManager = require('./downloadManager.js'),
     pathMapper = require('./pathMapper.js'),
     lessMiddleware = require('less-middleware'),
     eventEmitter = require('events').EventEmitter;
@@ -46,6 +47,7 @@ var dependencies = {
 };
 
 dependencies.serverManager = new serverManager(dependencies);
+dependencies.downloadManager = new downloadManager(dependencies);
 dependencies.pathMapper = new pathMapper(dependencies);
 
 routes.apply(dependencies, app);

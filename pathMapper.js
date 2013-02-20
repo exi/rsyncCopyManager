@@ -77,9 +77,7 @@ var pathmapper = module.exports = function(dependencies) {
         });
     };
 
-    dependencies.eventBus.on('fs-add', api.addEntry);
-    dependencies.eventBus.on('fs-del', api.delEntry);
-    dependencies.eventBus.on('server-removed', api.reloadAllEntries);
+    dependencies.eventBus.on('fs-change', api.reloadAllEntries);
 
     database(function(err, models) {
         models.FSEntry.findAll().success(function(fsentries) {

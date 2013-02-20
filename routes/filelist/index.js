@@ -82,12 +82,14 @@ module.exports.apply = function(dependencies, app) {
     app.post('/filelist/download-confirm', function(req, res) {
         if (req.body.path !== undefined) {
             database(function(err, models) {
-                models.Transfer.create({
+                models.Download.create({
                     path: req.body.path,
                     progress: 0
-                }).success(function(transf) {
-                    transf.setUser(req.session.user).error(function() {
-                        transf.destroy();
+                }).success(function(download) {
+                    download.setUser(req.session.user).success(function(download) {
+                        dependencies.downloadManager.addDownload(download);
+                    }).error(function() {
+                        download.destroy();
                     });
                 });
             });

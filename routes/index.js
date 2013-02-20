@@ -3,6 +3,7 @@
  */
 var servers = require('./servers');
 var filelist = require('./filelist');
+var downloads = require('./downloads');
 var database = require('../database.js');
 
 module.exports.apply = function(dependencies, app) {
@@ -62,12 +63,7 @@ module.exports.apply = function(dependencies, app) {
         res.render('index', { title: 'rsyncCopyManager' });
     });
 
-    app.post('/downloads', function(req, res) {
-        res.render('downloads', function(error, content) {
-            res.json({content: content});
-        });
-    });
-
     servers.apply(dependencies, app);
     filelist.apply(dependencies, app);
+    downloads.apply(dependencies, app);
 };

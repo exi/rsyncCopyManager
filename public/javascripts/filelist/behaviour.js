@@ -9,7 +9,7 @@ define(['jquery'], function($) {
                 $(this).fileTree({ root: '/', script: '/filelist/getDir' }, fileClickHandler);
             });
 
-            $('.filelist-download-link').livequery('click', function() {
+            $('.filelist-download').livequery('click', function() {
                 var path = $(this).attr('data-filelist-path');
                 var this_ = this;
                 $.ajax({

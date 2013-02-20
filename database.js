@@ -5,15 +5,15 @@ var sequelize = new (require('sequelize'))(config.db.name, config.db.user, confi
 
 var Server = sequelize.import(__dirname + '/activeRecord/Server');
 var User = sequelize.import(__dirname + '/activeRecord/User');
-var Transfer = sequelize.import(__dirname + '/activeRecord/Transfer');
+var Download = sequelize.import(__dirname + '/activeRecord/Download');
 var FSEntry = sequelize.import(__dirname + '/activeRecord/FSEntry');
 
 User.hasMany(Server, { as: 'Servers' });
-User.hasMany(Transfer, { as: 'Transfers' });
+User.hasMany(Download, { as: 'Downloads' });
 Server.hasMany(FSEntry, { as: 'FSEntries' });
 Server.belongsTo(User);
 FSEntry.belongsTo(Server);
-Transfer.belongsTo(User);
+Download.belongsTo(User);
 
 var synced = false;
 var syncing = false;
@@ -21,7 +21,7 @@ var models = {
     Server: Server,
     User: User,
     FSEntry: FSEntry,
-    Transfer: Transfer
+    Download: Download
 };
 var cbs = [];
 

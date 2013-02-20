@@ -34,7 +34,7 @@
 .jqueryFileTree li {
   padding-left: 20px;
 }
-a.filelist-download-link {
+.jqueryFileTree a {
   padding-left: 5px;
 }
 body {
