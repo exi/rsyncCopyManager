@@ -1,14 +1,18 @@
 define(['jquery'], function($) {
     return {
         apply: function() {
-            $('.add-server-form').livequery('submit', function(event) {
-                event.preventDefault();
-                $('.add-server-form-status').empty();
+            $('.add-server-form').livequery('submit', function(evt) {
+                if (evt && evt.preventDefault) {
+                    evt.preventDefault();
+                }
+
+                $(this).find('.form-status').empty();
 
                 var d = {};
                 var data = $(this).serializeArray().forEach(function(item) {
                     d[item.name] = item.value;
                 });
+                var this_ = this;
 
                 $.ajax({
                     url: '/servers/add',
@@ -17,7 +21,7 @@ define(['jquery'], function($) {
                 }).done(function(data) {
                     if (data && data.type && data.content) {
                         if (data.type == 'error') {
-                            $('.add-server-form-status').html(data.content);
+                            $(this_).find('.form-status').html(data.content);
                         } else if (data.type == 'success') {
                             $('.servers-list').html(data.content);
                         }
@@ -58,6 +62,23 @@ define(['jquery'], function($) {
                 updatefunc();
             }, function() {
                 clearTimeout(this.refreshTimer);
+            });
+
+            $('.server-limit').livequery('change', function(event) {
+                var id = $(this).attr('data-server-id');
+                var this_ = this;
+                var limit = $(this).val();
+                limit = limit === '' ? 0 : limit;
+                $.ajax({
+                    url: '/servers/setLimit',
+                    data: { id: id, limit: limit },
+                    type: 'POST'
+                }).always(function(data) {
+                    if (data && (data.type === 'error' || data.type === 'success')) {
+                        $(this_).removeClass('error success');
+                        $(this_).addClass(data.type);
+                    }
+                });
             });
         }
     };

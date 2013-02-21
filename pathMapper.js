@@ -78,6 +78,7 @@ var pathmapper = module.exports = function(dependencies) {
     };
 
     dependencies.eventBus.on('fs-change', api.reloadAllEntries);
+    dependencies.eventBus.on('server-removed', api.reloadAllEntries);
 
     database(function(err, models) {
         models.FSEntry.findAll().success(function(fsentries) {

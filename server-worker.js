@@ -109,7 +109,8 @@ var Server = function(modelInstance) {
 
     function resetFSCheckTime() {
         modelInstance.last_filelist_update = new Date();
-        modelInstance.save().success(function() {
+        modelInstance.last_seen = new Date();
+        modelInstance.save(['last_filelist_update', 'last_seen']).success(function() {
             finishedFsCheck();
         }).error(function() {
             finishedFsCheck();

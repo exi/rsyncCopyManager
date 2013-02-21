@@ -1,0 +1,20 @@
+if (users.length > 0)
+  table.table.table-striped
+    thead
+      tr
+        th Username
+        th Password
+        th Admin
+        th
+    tbody
+      each user in users
+        tr
+          td= user.name
+          td
+            input.span2.userlist-password(placeholder="New password", type="password", data-user-id="#{user.id}")
+          td
+            input.userlist-isAdmin(type="checkbox", checked=(user.isAdmin === true ? "checked" : undefined), data-user-id="#{user.id}")
+          td
+            button.btn.btn-danger.userlist-delete(type="button", data-loading-text="Deleting...", data-user-id="#{user.id}") Delete
+else
+  p You did not add any servers yet.

@@ -65,15 +65,14 @@ var download = module.exports.download = function (options) {
     events.EventEmitter.call(this);
 
     var args = buildargs(options, ['username', 'host', 'src', 'dest', 'keyfile']);
-    var process;
-    var exitPromise = new Promise();
+    var rsync;
 
     try {
-        process = spawn('rsync', args);
+        rsync = spawn('rsync', args);
         var progressregex = /\s*(\d+)\s+(\d+)%\s+(\d*\.*\d+[a-zA-Z]B\/s)\s*(\d+:\d+:\d+)/;
         var self = this;
 
-        process.stdout.on('data', function (data) {
+        rsync.stdout.on('data', function (data) {
             if (progressregex.test(data)) {
                 var m = progressregex.exec(data);
                 self.emit('progress', {
@@ -85,10 +84,10 @@ var download = module.exports.download = function (options) {
             }
         });
 
-        process.stderr.on('data', function (data) {
+        rsync.stderr.on('data', function (data) {
         });
 
-        process.on('exit', function (code) {
+        rsync.on('exit', function (code) {
             if (code === 0) {
                 self.emit('finish');
             } else {
@@ -100,16 +99,16 @@ var download = module.exports.download = function (options) {
     }
 
     this.kill = function() {
-        if (process && process.kill) {
+        if (rsync && rsync.kill) {
             console.log('killing rsync');
-            process.kill();
+            rsync.kill();
         }
-        exitPromise.then(function() {
-            p.resolve();
-        });
-
-        return exitPromise;
     };
+
+    var this_ = this;
+    process.on('exit', function() {
+        this_.kill();
+    });
 };
 
 util.inherits(download, events.EventEmitter);
@@ -123,24 +122,23 @@ var filelist = module.exports.filelist = function (options) {
     options.filelist = true;
 
     var args = buildargs(options, ['username', 'host', 'src', 'keyfile']);
-    var process;
-    var exitPromise = new Promise();
+    var rsync;
 
     try {
-        process = spawn('rsync', args);
+        rsync = spawn('rsync', args);
         var self = this;
         var filelistregex = /([d\-])[rwx\-]{9}\s+(\d+)\s+\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}\s(.*)/;
         var stdoutdata = '';
 
-        process.stdout.on('data', function (data) {
+        rsync.stdout.on('data', function (data) {
             stdoutdata += data;
         });
 
-        process.stderr.on('data', function (data) {
+        rsync.stderr.on('data', function (data) {
             data = 'err: ' + data;
         });
 
-        process.on('exit', function (code) {
+        rsync.on('exit', function (code) {
             if (code === 0) {
                 var filelist = [];
                 var lines = stdoutdata.split('\n');
@@ -159,19 +157,22 @@ var filelist = module.exports.filelist = function (options) {
             } else {
                 self.emit('error', code);
             }
-            exitPromise.resolve();
         });
     } catch (error) {
         this.emit('error', error);
-        exitPromise.resolve();
     }
 
     this.kill = function() {
         console.log('killing rsync');
-        if (process && process.kill) {
-            process.kill();
+        if (rsync && rsync.kill) {
+            rsync.kill();
         }
     };
+
+    var this_ = this;
+    process.on('exit', function() {
+        this_.kill();
+    });
 };
 
 util.inherits(filelist, events.EventEmitter);

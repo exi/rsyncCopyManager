@@ -11,5 +11,6 @@
     , "node-promise": "*"
     , "threads_a_gogo": "git://github.com/exi/node-threads-a-gogo.git#master"
     , "wrench": "*"
+    , "bcrypt": "*"
   }
 }

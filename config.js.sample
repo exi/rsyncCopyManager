@@ -4,9 +4,12 @@ module.exports = {
     port: 3000,
     pubkeyfile: '/home/exi/.ssh/id_rsa.pub',
     keyfile: '/home/exi/.ssh/id_rsa',
-    fs_check_interval: 2,
+    fs_check_interval: 1,
+    download_retry_interval: 1,
     logdir: __dirname + '/logs/',
     downloadDir: __dirname + '/download/',
+    defaultUser: 'admin',
+    defaultPassword: 'admin',
     db: {
         name: 'rsyncCopyManager',
         user: 'root',

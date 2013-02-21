@@ -17,19 +17,26 @@ var Queue = module.exports.Queue = function(dependencies) {
         var server = servers[serverId];
         var queue = server.queue;
         if (queue.length > 0) {
-            var token = queue[0];
-            token.on('finished', function() {
+            var item = queue[0];
+            if (item.finished === true) {
                 queue.shift();
-                runQueue(serverId);
-            });
-            token.start();
+                return runQueue(serverId);
+            } else {
+                item.token.on('finished', function() {
+                    queue.shift();
+                    runQueue(serverId);
+                });
+                item.token.start();
+            }
         }
     }
 
     dependencies.eventBus.on('server-removed', function(serverId) {
         if (servers.hasOwnProperty(serverId)) {
-            servers[serverId].queue.forEach(function(token) {
-                token.emit('reject');
+            servers[serverId].queue.forEach(function(item) {
+                if (item.finished === false) {
+                    item.token.emit('reject');
+                }
             });
             servers[serverId].queue = [];
         }
@@ -49,7 +56,16 @@ var Queue = module.exports.Queue = function(dependencies) {
             };
         }
 
-        servers[serverId].queue.push(token);
+        var item = {
+            finished: false,
+            token: token
+        };
+
+        servers[serverId].queue.push(item);
+
+        token.on('finished', function() {
+            item.finished = true;
+        });
         schedule(serverId);
     };
 

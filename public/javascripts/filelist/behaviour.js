@@ -22,6 +22,8 @@ define(['jquery'], function($) {
                         $('#filelistModal').modal('show');
                     }
                 });
+
+                return false;
             });
 
             $('.filelist-download-confirm').livequery('click', function() {

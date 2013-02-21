@@ -1,0 +1,22 @@
+form.form-horizontal.add-user-form
+  legend Add User
+  .form-status
+  .control-group
+    label.control-label(for="username") Username:
+    .controls
+      input(type="text", name="username", placeholder="Username")
+  .control-group
+    label.control-label(for="password") Password:
+    .controls
+      input(type="password", name="password", placeholder="Password")
+  .control-group
+    label.control-label(for="passwordRepeat") Password(repeat):
+    .controls
+      input(type="password", name="passwordRepeat", placeholder="Password")
+  .control-group
+    label.control-label(for="isAdmin") Admin:
+    .controls
+      input(type="checkbox", name="isAdmin")
+  .control-group
+    .controls
+      button.btn.btn-primary(href="#") Add User

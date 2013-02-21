@@ -23,6 +23,7 @@ define(['jquery'], function($) {
             switchMainContent('.menu-downloads-link', '/downloads');
             switchMainContent('.menu-servers-link', '/servers');
             switchMainContent('.menu-filelist-link', '/filelist');
+            switchMainContent('.menu-settings-link', '/settings');
         }
     };
 });

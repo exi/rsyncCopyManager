@@ -22,6 +22,8 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var token = null;
     var queued = false;
     var noMatchingServer = false;
+    var currentServer = null;
+    var restart = false;
 
     api.getStatus = function() {
         var p = new Promise();
@@ -36,10 +38,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 status.downloadStatus = downloadStatus;
             }
 
-            if (serverOffline) {
-                status.serverOffline = true;
-            }
-
             if (noMatchingServer) {
                 status.noMatchingServer = true;
             }
@@ -50,6 +48,10 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
             if (modelInstance.complete === true) {
                 status.complete = true;
+            }
+
+            if (serverOffline) {
+                status.serverOffline = true;
             }
 
             p.resolve(status);
@@ -84,12 +86,16 @@ var Download = module.exports = function(dependencies, modelInstance) {
             deletePromise.then(function() {
                 var parts = path.split('/');
                 var completepath = config.downloadDir + '/' + parts.pop();
-                var stat = fs.statSync(completepath);
+                try {
+                    var stat = fs.statSync(completepath);
 
-                if (stat.isDirectory()) {
-                    wrench.rmdirSyncRecursive(completepath, true);
-                } else if (stat.isFile()) {
-                    fs.unlink(completepath);
+                    if (stat.isDirectory()) {
+                        wrench.rmdirSyncRecursive(completepath, true);
+                    } else if (stat.isFile()) {
+                        fs.unlink(completepath);
+                    }
+                } catch (e) {
+                    console.log(e);
                 }
 
                 p.resolve();
@@ -98,6 +104,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
         return p;
     };
+
+    function updateLastSeen(server) {
+        server.last_seen = new Date();
+        server.save(['last_seen']);
+    }
 
     function download(server) {
         if (stop) {
@@ -108,6 +119,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         exitPromise = new Promise();
         queued = false;
         downloading = true;
+        currentServer = server;
 
         var options = {
             keyfile: config.keyfile,
@@ -117,8 +129,8 @@ var Download = module.exports = function(dependencies, modelInstance) {
             dest: config.downloadDir + '/'
         };
 
-        if (modelInstance.bwlimit !== null) {
-            options.bwlimit = modelInstance.bwlimit;
+        if (server.bwlimit !== undefined) {
+            options.bwlimit = server.bwlimit;
         }
 
         process = new rsync.download(options);
@@ -128,43 +140,69 @@ var Download = module.exports = function(dependencies, modelInstance) {
             downloadStatus = data;
             modelInstance.progress = data.progress;
             modelInstance.save();
-            console.log('progress');
-            console.log(data);
+            updateLastSeen(server);
         });
 
         process.on('finish', function() {
-            stopDownload();
             downloadStatus.rate = 0;
             downloadStatus.percent = modelInstance.progress = 100;
             modelInstance.complete = 1;
             modelInstance.save();
-            process = null;
-            exitPromise.resolve();
-            exitPromise = null;
+            onProcessEnd();
+            updateLastSeen(server);
             console.log('finished');
-            token.emit('finished');
-            token = null;
+            finishToken();
         });
 
         process.on('error', function(code) {
             console.log('got error ' + code);
             serverOffline = true;
-            stopDownload();
-            process = null;
-            exitPromise.resolve();
-            exitPromise = null;
-            resetDownloadTimer();
+            onProcessEnd();
+            if (restart === true) {
+                restartDownload();
+            } else {
+                finishToken();
+                resetDownloadTimer();
+            }
         });
     }
 
+    function onProcessEnd() {
+        stopDownload();
+        process = null;
+        exitPromise.resolve();
+        exitPromise = null;
+    }
+
+    function finishToken() {
+        token.emit('finished');
+        token = null;
+    }
+
     function resetDownloadTimer() {
-        if (modelInstance.complete) {
+        if (modelInstance.complete || stop) {
             return;
         }
 
         clearTimeout(downloadTimer);
         downloadtimer = setTimeout(startDownload, config.download_retry_interval * 60 * 1000);
     }
+
+    function restartDownload() {
+        if (stop) {
+            return stopDownload();
+        }
+        console.log('restarting download');
+        restart = false;
+        if (process) {
+            restart = true;
+            process.kill();
+        } else if (token) {
+            token.emit('finished');
+            startDownload();
+        }
+    }
+
 
     function stopDownload() {
         downloading = false;
@@ -200,11 +238,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
                     dependencies.serverQueue.queue(server.id, token);
                     token.on('rejected', function() {
                         queued = false;
-                        if (process) {
-                            process.kill();
-                        } else {
-                            startDownload();
-                        }
+                        restartDownload();
                     });
                 }).error(function() {
                     console.log('Server not found');
@@ -216,6 +250,12 @@ var Download = module.exports = function(dependencies, modelInstance) {
             });
         });
     }
+
+    dependencies.eventBus.on('server-change', function(serverId) {
+        if (currentServer && currentServer.id === serverId) {
+            restartDownload();
+        }
+    });
 
     database(function(err, models) {
         if (err) {

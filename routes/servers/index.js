@@ -1,6 +1,5 @@
 var database = require('../../database.js');
 var fs = require('fs');
-var crypto = require('crypto');
 var config = require('../../config.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
@@ -8,10 +7,14 @@ var Promise = require('node-promise').Promise;
 function convertServersForView(servers) {
     var ret = [];
     servers.forEach(function(server) {
+        var limit = !server.bwlimit ? '0' : server.bwlimit;
+        console.log('limit: ');
+        console.log(limit);
         ret.push({
             id: server.id,
             username: server.username,
             hostname: server.hostname,
+            limit: limit,
             path: server.path
         });
     });
@@ -25,8 +28,11 @@ function sendServerList(res, user) {
         res.render(
             'servers-list',
             { servers: servers },
-            function(error, content) {
-                res.json({ type: 'success', content: content });
+            function(err, content) {
+                if (err) {
+                    return util.sendError(err);
+                }
+                util.sendSuccess(res, content);
             }
         );
     }).error(function(err) {
@@ -64,7 +70,7 @@ module.exports.apply = function(dependencies, app) {
                     if (err) {
                         return util.sendError(res, err);
                     }
-                    res.json({ content: content });
+                    util.sendSuccess(res, content);
                 }
                 );
         }).error(function(err) {
@@ -126,6 +132,29 @@ module.exports.apply = function(dependencies, app) {
         });
     });
 
+    app.post('/servers/setLimit', function(req, res) {
+        if (!req.body || !req.body.id || !req.body.limit) {
+            return util.sendError(res, 'Invalid request!');
+        }
+        var limit = parseInt(req.body.limit, 10);
+
+        getServerWithId(req, req.body.id).then(function(server) {
+            if (limit === 0) {
+                limit = null;
+            }
+            server.bwlimit = limit;
+            server.save(['bwlimit']).success(function() {
+                console.log('new limit: ' + limit);
+                util.sendSuccess(res);
+                dependencies.eventBus.emit('server-change', server.id);
+            }).error(function() {
+                util.sendError(res, 'Error saving the settings.');
+            });
+        }, function() {
+            util.sendError(res, 'Server not found!');
+        });
+    });
+
     app.post('/servers/status', function(req, res) {
         if (!req.body || !req.body.id) {
             return util.sendError(res, 'Invalid request!');
@@ -148,7 +177,7 @@ module.exports.apply = function(dependencies, app) {
                 }
 
                 content = msgs.length === 0 ? content : msgs.join(', ');
-                res.json({ type: 'success', content: content });
+                util.sendSuccess(res, content);
             }, function(status) {
                 util.sendError(res, status);
             });
