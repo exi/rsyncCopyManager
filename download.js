@@ -15,7 +15,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var downloading = false;
     var serverOffline = false;
     var downloadStatus = null;
-    var process;
+    var rsyncp;
     var stop = false;
     var exitPromise;
     var downloadTimer;
@@ -70,16 +70,9 @@ var Download = module.exports = function(dependencies, modelInstance) {
             token.emit('finished');
         }
 
-        if (exitPromise) {
-            console.log('awiting for exitPromise');
-            process.kill();
-            exitPromise.then(function() {
-                deletePromise.resolve();
-            });
-            stopDownload();
-        } else {
+        api.close.then(function() {
             deletePromise.resolve();
-        }
+        });
 
         var path = modelInstance.path;
         modelInstance.destroy().success(function() {
@@ -101,6 +94,24 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 p.resolve();
             });
         });
+
+        return p;
+    };
+
+    api.close = function() {
+        console.log('download api close');
+        var p = new Promise();
+
+        if (exitPromise) {
+            console.log('waiting for exitPromise');
+            rsyncp.kill();
+            exitPromise.then(function() {
+                p.resolve();
+            });
+            stopDownload();
+        } else {
+            p.resolve();
+        }
 
         return p;
     };
@@ -133,9 +144,9 @@ var Download = module.exports = function(dependencies, modelInstance) {
             options.bwlimit = server.bwlimit;
         }
 
-        process = new rsync.download(options);
+        rsyncp = new rsync.download(options);
 
-        process.on('progress', function(data) {
+        rsyncp.on('progress', function(data) {
             serverOffline = false;
             downloadStatus = data;
             modelInstance.progress = data.progress;
@@ -143,21 +154,21 @@ var Download = module.exports = function(dependencies, modelInstance) {
             updateLastSeen(server);
         });
 
-        process.on('finish', function() {
+        rsyncp.on('finish', function() {
             downloadStatus.rate = 0;
             downloadStatus.percent = modelInstance.progress = 100;
             modelInstance.complete = 1;
             modelInstance.save();
-            onProcessEnd();
+            onrsyncpEnd();
             updateLastSeen(server);
             console.log('finished');
             finishToken();
         });
 
-        process.on('error', function(code) {
+        rsyncp.on('error', function(code) {
             console.log('got error ' + code);
             serverOffline = true;
-            onProcessEnd();
+            onrsyncpEnd();
             if (restart === true) {
                 restartDownload();
             } else {
@@ -167,9 +178,9 @@ var Download = module.exports = function(dependencies, modelInstance) {
         });
     }
 
-    function onProcessEnd() {
+    function onrsyncpEnd() {
         stopDownload();
-        process = null;
+        rsyncp = null;
         exitPromise.resolve();
         exitPromise = null;
     }
@@ -194,9 +205,9 @@ var Download = module.exports = function(dependencies, modelInstance) {
         }
         console.log('restarting download');
         restart = false;
-        if (process) {
+        if (rsyncp) {
             restart = true;
-            process.kill();
+            rsyncp.kill();
         } else if (token) {
             token.emit('finished');
             startDownload();
@@ -270,6 +281,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
         };
         startupPromise.then(startDownload);
     }
+
+    process.on('exit', function() {
+        console.log('killing download');
+        api.close();
+    });
 
     return api;
 };

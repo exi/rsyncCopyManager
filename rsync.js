@@ -101,7 +101,9 @@ var download = module.exports.download = function (options) {
     this.kill = function() {
         if (rsync && rsync.kill) {
             console.log('killing rsync');
-            rsync.kill();
+            rsync.kill('SIGINT');
+            rsync.kill('SIGTERM');
+            rsync.kill('SIGHUP');
         }
     };
 
@@ -165,7 +167,9 @@ var filelist = module.exports.filelist = function (options) {
     this.kill = function() {
         console.log('killing rsync');
         if (rsync && rsync.kill) {
-            rsync.kill();
+            rsync.kill('SIGINT');
+            rsync.kill('SIGTERM');
+            rsync.kill('SIGHUP');
         }
     };
 
