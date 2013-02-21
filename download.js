@@ -70,7 +70,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
             token.emit('finished');
         }
 
-        api.close.then(function() {
+        api.close().then(function() {
             deletePromise.resolve();
         });
 
@@ -104,10 +104,10 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
         if (exitPromise) {
             console.log('waiting for exitPromise');
-            rsyncp.kill();
             exitPromise.then(function() {
                 p.resolve();
             });
+            rsyncp.kill();
             stopDownload();
         } else {
             p.resolve();

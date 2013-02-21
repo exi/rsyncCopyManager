@@ -59,10 +59,12 @@ database(function() {});
 
 var server = http.createServer(app);
 server.listen(config.port, function() {
+    process.setuid(config.uid);
     console.log("Express server listening on port %d in %s mode", server.address().port, app.settings.env);
 });
 
 process.on('uncaughtException', function(e) {
+    console.log(e);
     console.trace();
     process.exit(1);
 });
