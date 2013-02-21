@@ -2,6 +2,7 @@ module.exports = {
     cookieSecret: 'soosecret',
     cookieName: 'rsyncCopyManager',
     port: 3000,
+    uid: 'exi',
     pubkeyfile: '/home/exi/.ssh/id_rsa.pub',
     keyfile: '/home/exi/.ssh/id_rsa',
     fs_check_interval: 1,
