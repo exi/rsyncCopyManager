@@ -37,6 +37,5 @@ require([
         filelistBehaviour.apply();
         downloadsBehaviour.apply();
         settingsBehaviour.apply();
-        $('.menu-downloads-link').trigger('click');
     });
 });
