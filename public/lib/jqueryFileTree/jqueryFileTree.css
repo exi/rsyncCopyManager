@@ -59,6 +59,7 @@ UL.jqueryFileTree A:hover {
 .jqueryFileTree LI.ext_lasso { background: url(images/code.png) left top no-repeat; }
 .jqueryFileTree LI.ext_log { background: url(images/txt.png) left top no-repeat; }
 .jqueryFileTree LI.ext_m4p { background: url(images/music.png) left top no-repeat; }
+.jqueryFileTree LI.ext_mkv { background: url(images/film.png) left top no-repeat; }
 .jqueryFileTree LI.ext_mov { background: url(images/film.png) left top no-repeat; }
 .jqueryFileTree LI.ext_mp3 { background: url(images/music.png) left top no-repeat; }
 .jqueryFileTree LI.ext_mp4 { background: url(images/film.png) left top no-repeat; }
