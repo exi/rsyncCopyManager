@@ -58,10 +58,15 @@ routes.apply(dependencies, app);
 database(function() {});
 
 var server = http.createServer(app);
-server.listen(config.port, function() {
+function listenCallback{
     process.setuid(config.uid);
     console.log("Express server listening on port %d in %s mode", server.address().port, app.settings.env);
-});
+};
+if (config.ip) {
+    server.listen(config.port, config.ip, listenCallback);
+} else {
+    server.listen(config.port, listenCallback);
+}
 
 process.on('uncaughtException', function(e) {
     console.log(e);
