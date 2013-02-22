@@ -54,6 +54,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 status.serverOffline = true;
             }
 
+            console.log(status);
             p.resolve(status);
         });
 
@@ -157,7 +158,8 @@ var Download = module.exports = function(dependencies, modelInstance) {
         rsyncp.on('finish', function() {
             downloadStatus.rate = 0;
             downloadStatus.percent = modelInstance.progress = 100;
-            modelInstance.complete = 1;
+            modelInstance.complete = true;
+            downloadStatus = null;
             modelInstance.save();
             onrsyncpEnd();
             updateLastSeen(server);

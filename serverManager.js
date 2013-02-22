@@ -45,6 +45,12 @@ var ServerManager = module.exports = function(dependencies) {
         return p;
     };
 
+    api.close = function() {
+        for (var i in servers) {
+            servers[i].close();
+        }
+    };
+
     database(function(err, models) {
         if (err) {
             throw err;

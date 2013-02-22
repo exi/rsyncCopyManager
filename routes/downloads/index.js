@@ -100,12 +100,14 @@ module.exports.apply = function(dependencies, app) {
                     }
 
                     if (dls.rate) {
-                        content.rate = dls.rate || 0;
+                        content.rate = dls.rate || '';
                     }
                 }
 
                 if (status.complete) {
                     msgs.push('Complete');
+                    content.progress = 100;
+                    content.rate = '';
                 }
 
                 if (status.serverOffline) {
@@ -158,7 +160,25 @@ module.exports.apply = function(dependencies, app) {
 
         getDownloadWithId(req, req.body.id).then(function(download) {
             dependencies.downloadManager.delDownload(download.id).then(function() {
-                sendDownloadList(res, req.session.user);
+                database(function(err, models) {
+                    if (err) {
+                        return util.sendError(res, err);
+                    }
+
+                    models.Download.count({
+                        where: {
+                            UserId: req.session.user.id
+                        }
+                    }).success(function(c) {
+                        if (c > 0) {
+                            util.sendSuccess(res);
+                        } else {
+                            sendDownloadList(res, req.session.user);
+                        }
+                    }).error(function(err) {
+                        util.sendError(res, err);
+                    });
+                });
             });
         }, function() {
             util.sendError(res, 'Download not found!');

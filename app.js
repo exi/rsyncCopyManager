@@ -66,5 +66,7 @@ server.listen(config.port, function() {
 process.on('uncaughtException', function(e) {
     console.log(e);
     console.trace();
+    dependencies.downloadManager.close();
+    dependencies.serverManager.close();
     process.exit(1);
 });

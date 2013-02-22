@@ -46,6 +46,12 @@ var DownloadManager = module.exports = function(dependencies) {
         return p;
     };
 
+    api.close = function() {
+        for (var i in downloads) {
+            downloads[i].close();
+        }
+    };
+
     database(function(err, models) {
         if (err) {
             throw err;
@@ -55,6 +61,6 @@ var DownloadManager = module.exports = function(dependencies) {
             s.forEach(api.addDownload);
         });
     });
-
     return api;
 };
+

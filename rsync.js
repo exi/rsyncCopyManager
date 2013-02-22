@@ -106,11 +106,6 @@ var download = module.exports.download = function (options) {
             rsync.kill('SIGHUP');
         }
     };
-
-    var this_ = this;
-    process.on('exit', function() {
-        this_.kill();
-    });
 };
 
 util.inherits(download, events.EventEmitter);
@@ -172,11 +167,6 @@ var filelist = module.exports.filelist = function (options) {
             rsync.kill('SIGHUP');
         }
     };
-
-    var this_ = this;
-    process.on('exit', function() {
-        this_.kill();
-    });
 };
 
 util.inherits(filelist, events.EventEmitter);

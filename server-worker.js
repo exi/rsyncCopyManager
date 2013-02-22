@@ -209,12 +209,6 @@ var Server = function(modelInstance) {
 
     }
 
-    process.on('disconnect', function() {
-        if (rsyncp && rsyncp.kill) {
-            rsyncp.kill();
-        }
-    });
-
     function periodicCheck() {
         var fstime = modelInstance.last_filelist_update;
         var checkintervall = config.fs_check_interval * 60 * 1000;
@@ -285,11 +279,22 @@ process.on('message', function(data) {
     }
 });
 
-process.on('disconnect', function() {
+function close() {
     if (instance !== null) {
         instance.close().then(function() {
-            console.log('exiting server worker due to disconnect');
-            process.exit();
+            process.exit(1);
         });
+    } else {
+        process.exit(1);
     }
+}
+
+process.on('exit', function() {
+    console.log('exiting server worker due to exit');
+    close();
+});
+
+process.on('disconnect', function() {
+    console.log('exiting server worker due to disconnect');
+    close();
 });

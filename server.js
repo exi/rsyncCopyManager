@@ -50,6 +50,15 @@ var Server = module.exports = function(dependencies, serverId) {
         return p;
     };
 
+    api.close = function() {
+        var p = new Promise();
+        startupPromise.then(function() {
+            worker.kill();
+            p.resolve();
+        });
+        return p;
+    };
+
     api.getStatus = function() {
         var p = new Promise();
         startupPromise.then(function() {

@@ -1,4 +1,6 @@
 var database = require('../../database.js');
+var util = require('../util.js');
+
 module.exports.apply = function(dependencies, app) {
     app.post('/filelist', function(req, res) {
         res.render(
@@ -88,8 +90,13 @@ module.exports.apply = function(dependencies, app) {
                 }).success(function(download) {
                     download.setUser(req.session.user).success(function(download) {
                         dependencies.downloadManager.addDownload(download);
-                    }).error(function() {
-                        download.destroy();
+                        util.sendSuccess(res);
+                    }).error(function(err) {
+                        download.destroy().success(function() {
+                            util.sendError(res, err);
+                        }).error(function() {
+                            util.sendError(res, err);
+                        });
                     });
                 });
             });

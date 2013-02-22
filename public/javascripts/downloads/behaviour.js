@@ -32,7 +32,7 @@ define(['jquery'], function($) {
                                 $(this_).find('.download-status-progress').removeClass('active');
                             }
 
-                            if (content.rate) {
+                            if (content.rate !== undefined) {
                                 $(this_).find('.download-status-rate').html(content.rate);
                             }
                         }
@@ -67,8 +67,12 @@ define(['jquery'], function($) {
                     data: { id: id },
                     type: 'POST'
                 }).always(function(data) {
-                    if (data && data.content) {
-                        $('.downloads-list').html(data.content);
+                    if (data && data.type === 'success') {
+                        if (data.content) {
+                            $('.downloads-list').html(data.content);
+                        } else {
+                            $(this_).closest('.download-status').remove();
+                        }
                     }
                 });
             });

@@ -69,8 +69,6 @@ var pathmapper = module.exports = function(dependencies) {
         console.log('pm reload');
         startupPromise.then(function(models) {
             models.FSEntry.findAll().success(function(fsentries) {
-                console.log('reloading with');
-                console.log(fsentries);
                 pathmap = createFSEntry();
                 fsentries.forEach(api.addEntry);
             });
