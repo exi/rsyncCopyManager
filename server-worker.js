@@ -35,7 +35,6 @@ var Server = function(modelInstance) {
         console.log('closing server ' + modelInstance.id);
         stopTimer();
         stop = true;
-        waitForClose = true;
     }
 
     api.closeAndDelete = function() {
@@ -61,10 +60,12 @@ var Server = function(modelInstance) {
     api.close = function() {
         var p = new Promise();
         setStopIndicators();
+        waitForClose = true;
 
         var promises = [];
         if (checkFileListPromise !== null) {
             promises.push(checkFileListPromise);
+            rsyncp.kill();
         }
 
         All(promises).then(function() {
