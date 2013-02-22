@@ -4,5 +4,8 @@ module.exports = function(sequelize, DataTypes) {
         path: { type: DataTypes.TEXT, allowNull: false },
         progress: { type: DataTypes.FLOAT, allowNull: false, defaultValue: 0 },
         complete: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
+    }, {
+        charset: 'utf8',
+        collate: 'utf8_general_ci'
     });
 };

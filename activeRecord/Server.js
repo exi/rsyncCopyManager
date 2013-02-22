@@ -7,5 +7,8 @@ module.exports = function(sequelize, DataTypes) {
         bwlimit: { type: DataTypes.INTEGER, allowNull: true, defaultValue: null },
         last_filelist_update: { type: DataTypes.DATE, allowNull: true },
         last_seen: { type: DataTypes.DATE, allowNull: true }
+    }, {
+        charset: 'utf8',
+        collate: 'utf8_general_ci'
     });
 };
