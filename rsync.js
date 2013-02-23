@@ -25,6 +25,7 @@ function buildargs(options, mandatory) {
     args.push('--rsh=ssh -i"' + options.keyfile + '" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no');
     args.push('--recursive');
     args.push('--timeout=120');
+    args.push('--copy-links');
     if (options.filelist !== true) {
         args.push('--partial');
         args.push('--progress');
