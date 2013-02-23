@@ -63,11 +63,11 @@ var DownloadManager = module.exports = function(dependencies) {
     };
 
     function updateSpace() {
-        exec('df -BK "' + config.downloadDir + '" | tail -n1', function(err, stdout, stderr) {
+        exec('df -BM "' + config.downloadDir + '" | tail -n1', function(err, stdout, stderr) {
             if (!err) {
                 var regex = /[^ ]+\s+[^ ]+\s+[^ ]+\s+([^ ]+)\s+[^ ]/;
                 var m = regex.exec(stdout);
-                spaceLeft = parseInt(m[1], 10) * 1024;
+                spaceLeft = parseInt(m[1], 10) * 1024 * 1024;
             }
             spaceQueryTimer = setTimeout(updateSpace, 1000 * 120);
         });
