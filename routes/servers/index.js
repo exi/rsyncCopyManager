@@ -230,10 +230,6 @@ module.exports.apply = function(dependencies, app) {
                     msgs.push('Offline');
                 }
 
-                if (status.serverOffline === true) {
-                    msgs.push('Offline');
-                }
-
                 var msg = msgs.length === 0 ? 'Idle' : msgs.join(', ');
                 var content = {
                     msg: msg
