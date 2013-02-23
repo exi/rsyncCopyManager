@@ -47,7 +47,7 @@ define(['jquery'], function($) {
                     clearTimeout(this.submitTimer);
                     var this_ = this;
                     this.submitTimer = setTimeout(function() {
-                        this.lastval = val;
+                        this_.lastval = val;
                         var words = val.split(' ');
                         $('.filelist-tree').empty();
                         $('.filelist-tree').fileTree({ root: '/', script: '/filelist/getDir', searchWords: words }, fileClickHandler);
