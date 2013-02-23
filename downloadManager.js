@@ -63,7 +63,7 @@ var DownloadManager = module.exports = function(dependencies) {
     };
 
     function updateSpace() {
-        exec('df -BM "' + config.downloadDir + '" | tail -n1', function(err, stdout, stderr) {
+        exec('df -PBK "' + config.downloadDir + '" | tail -n1', function(err, stdout, stderr) {
             if (!err) {
                 var regex = /[^ ]+\s+[^ ]+\s+[^ ]+\s+([^ ]+)\s+[^ ]/;
                 var m = regex.exec(stdout);
