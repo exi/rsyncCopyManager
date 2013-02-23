@@ -203,22 +203,19 @@ module.exports.apply = function(dependencies, app) {
     });
 
     app.post('/downloads/del-confirm', function(req, res) {
-        if (!req.body || req.body.id === undefined) {
+        if (!req.body || req.body.id === undefined || req.body.deleteData === undefined) {
             return util.sendError(res, 'Invalid Request!');
         }
 
+        console.log(req.body);
         getDownloadWithId(req, req.body.id).then(function(download) {
-            dependencies.downloadManager.delDownload(download.id).then(function() {
+            dependencies.downloadManager.delDownload(download.id, req.body.deleteData === 'true').then(function() {
                 database(function(err, models) {
                     if (err) {
                         return util.sendError(res, err);
                     }
 
-                    models.Download.count({
-                        where: {
-                            UserId: req.session.user.id
-                        }
-                    }).success(function(c) {
+                    models.Download.count().success(function(c) {
                         if (c > 0) {
                             util.sendSuccess(res);
                         } else {

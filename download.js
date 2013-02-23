@@ -69,7 +69,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         return p;
     };
 
-    api.closeAndDelete = function() {
+    api.closeAndDelete = function(deleteData) {
         stop = true;
 
         var p = new Promise();
@@ -88,16 +88,20 @@ var Download = module.exports = function(dependencies, modelInstance) {
             deletePromise.then(function() {
                 var parts = path.split('/');
                 var completepath = config.downloadDir + '/' + parts.pop();
-                try {
-                    var stat = fs.statSync(completepath);
 
-                    if (stat.isDirectory()) {
-                        wrench.rmdirSyncRecursive(completepath, true);
-                    } else if (stat.isFile()) {
-                        fs.unlink(completepath);
+                if (deleteData) {
+                    console.log('deleting data');
+                    try {
+                        var stat = fs.statSync(completepath);
+
+                        if (stat.isDirectory()) {
+                            wrench.rmdirSyncRecursive(completepath, true);
+                        } else if (stat.isFile()) {
+                            fs.unlink(completepath);
+                        }
+                    } catch (e) {
+                        console.log(e);
                     }
-                } catch (e) {
-                    console.log(e);
                 }
 
                 p.resolve();

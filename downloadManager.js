@@ -16,12 +16,12 @@ var DownloadManager = module.exports = function(dependencies) {
         }
     };
 
-    api.delDownload = function(downloadId) {
+    api.delDownload = function(downloadId, deleteData) {
         var p = new Promise();
 
         if (downloads.hasOwnProperty(downloadId)) {
             var download = downloads[downloadId].manager;
-            download.closeAndDelete().then(function() {
+            download.closeAndDelete(deleteData).then(function() {
                 delete downloads[downloadId];
                 console.log('download removed');
                 p.resolve();

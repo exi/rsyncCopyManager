@@ -59,22 +59,32 @@ define(['jquery'], function($) {
                 });
             });
 
-            $('.download-delete-confirm').livequery('click', function() {
+            $('.download-delete-confirm').livequery(function() {
                 var id = $(this).attr('data-download-id');
                 var this_ = this;
-                $.ajax({
-                    url: '/downloads/del-confirm',
-                    data: { id: id },
-                    type: 'POST'
-                }).always(function(data) {
-                    if (data && data.type === 'success') {
-                        if (data.content) {
-                            $('.downloads-list').html(data.content);
-                        } else {
-                            $('.download-status[data-download-id="' + id + '"]').remove();
+                var deleteData = true;
+                $(this).find('.download-delete-confirm-button').bind('click', function() {
+                    $.ajax({
+                        url: '/downloads/del-confirm',
+                        data: { id: id, deleteData: deleteData },
+                        type: 'POST'
+                    }).always(function(data) {
+                        if (data && data.type === 'success') {
+                            if (data.content) {
+                                $('.downloads-list').html(data.content);
+                            } else {
+                                $('.download-status[data-download-id="' + id + '"]').remove();
+                            }
                         }
-                    }
+                    });
                 });
+
+                $(this).find('.download-delete-data').bind('click', function() {
+                    deleteData = $(this).is(':checked');
+                });
+            }, function() {
+                $(this).find('.download-delete-confirm-button').unbind('click');
+                $(this).find('.download-delete-data').unbind('click');
             });
         }
     };
