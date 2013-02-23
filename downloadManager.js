@@ -1,11 +1,15 @@
 var database = require('./database.js');
 var Download = require('./download.js');
 var Promise = require('node-promise').Promise;
-var rsync = require('./rsync');
+var rsync = require('./rsync.js');
+var config = require('./config.js');
+var exec = require('child_process').exec;
 
 var DownloadManager = module.exports = function(dependencies) {
     var downloads = {};
     var api = {};
+    var spaceLeft = 0;
+    var spaceQueryTimer;
 
     api.addDownload = function(model) {
         if (model && model.id) {
@@ -51,6 +55,25 @@ var DownloadManager = module.exports = function(dependencies) {
             downloads[i].manager.close();
         }
     };
+
+    api.getSpaceLeft = function() {
+        var p = new Promise();
+        p.resolve(spaceLeft);
+        return p;
+    };
+
+    function updateSpace() {
+        exec('df -BK "' + config.downloadDir + '" | tail -n1', function(err, stdout, stderr) {
+            if (!err) {
+                var regex = /[^ ]+\s+[^ ]+\s+[^ ]+\s+([^ ]+)\s+[^ ]/;
+                var m = regex.exec(stdout);
+                spaceLeft = parseInt(m[1], 10) * 1024;
+            }
+            spaceQueryTimer = setTimeout(updateSpace, 1000 * 120);
+        });
+    }
+
+    updateSpace();
 
     database(function(err, models) {
         if (err) {

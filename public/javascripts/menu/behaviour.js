@@ -70,6 +70,24 @@ define(['jquery'], function($) {
             $(window).bind('hashchange', function(e) {
                 goToHash();
             });
+
+            $('.space-left').livequery(function() {
+                var this_ = this;
+                var updatefunc = function () {
+                    $.ajax({
+                        url: '/spaceLeft',
+                        type: 'POST'
+                    }).always(function(data) {
+                        if (data && data.content) {
+                            $(this_).html(data.content);
+                        }
+                        this_.refreshTimer = setTimeout(updatefunc, 1000 * 30);
+                    });
+                };
+                updatefunc();
+            }, function() {
+                clearTimeout(this.refreshTimer);
+            });
         }
     };
 });

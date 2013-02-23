@@ -6,7 +6,7 @@ var filelist = require('./filelist');
 var downloads = require('./downloads');
 var settings = require('./settings');
 var database = require('../database.js');
-var utils = require('./util.js');
+var util = require('./util.js');
 var config = require('../config.js');
 
 module.exports.apply = function(dependencies, app) {
@@ -22,7 +22,7 @@ module.exports.apply = function(dependencies, app) {
                         name: req.body.user
                     }
                 }).success(function(user) {
-                    if (user === null || !utils.checkPassword(req.body.password, user.password)) {
+                    if (user === null || !util.checkPassword(req.body.password, user.password)) {
                         renderdata.error = 'Invalid username or password';
                         res.render('login', renderdata);
                     } else  {
@@ -37,7 +37,7 @@ module.exports.apply = function(dependencies, app) {
                     if (c === 0) {
                         models.User.create({
                             name: config.defaultUser,
-                            password: utils.hash(config.defaultPassword),
+                            password: util.hash(config.defaultPassword),
                             isAdmin: true
                         }).success(function(user) {
                             req.session.user = user;
@@ -81,6 +81,14 @@ module.exports.apply = function(dependencies, app) {
 
     app.get('/',  function(req, res) {
         res.render('index', { title: 'rsyncCopyManager' });
+    });
+
+    app.post('/spaceLeft', function(req, res) {
+        dependencies.downloadManager.getSpaceLeft().then(function(spaceLeft) {
+            util.sendSuccess(res, util.convertToHumanReadableSize(spaceLeft) + ' left on device');
+        }, function(err) {
+            util.sendError(res, err);
+        });
     });
 
     servers.apply(dependencies, app);

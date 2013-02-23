@@ -5,7 +5,11 @@ block header
     .navbar-inner
       .container
         a.brand(href="#") rsyncCopyManager
-        .nav-collapse
+        a.btn.btn-navbar(data-toggle="collapse", data-target=".nav-collapse")
+          span.icon-bar
+          span.icon-bar
+          span.icon-bar
+        .nav-collapse.collapse
           ul.nav
             li
               a.menu-downloads-link(href="#Downloads") Downloads
@@ -17,6 +21,8 @@ block header
               a.menu-settings-link(href="#Settings") Settings
             li
               a(href="/logout") Logout
+            li
+              a.space-left
 
 block content
   #mainContainer.container

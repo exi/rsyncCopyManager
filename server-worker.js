@@ -230,7 +230,7 @@ var Server = function(modelInstance) {
         resetTimer();
     }
 
-    resetTimer();
+    periodicCheck();
 
     return api;
 };
