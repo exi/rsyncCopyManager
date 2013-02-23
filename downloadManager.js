@@ -48,7 +48,7 @@ var DownloadManager = module.exports = function(dependencies) {
 
     api.close = function() {
         for (var i in downloads) {
-            downloads[i].close();
+            downloads[i].manager.close();
         }
     };
 

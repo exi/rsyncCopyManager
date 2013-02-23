@@ -47,7 +47,7 @@ var ServerManager = module.exports = function(dependencies) {
 
     api.close = function() {
         for (var i in servers) {
-            servers[i].close();
+            servers[i].manager.close();
         }
     };
 

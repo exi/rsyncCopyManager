@@ -24,6 +24,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var noMatchingServer = false;
     var currentServer = null;
     var restart = false;
+    var currentQueuePosition = 0;
 
     api.getStatus = function() {
         var p = new Promise();
@@ -44,6 +45,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
             if (queued) {
                 status.queued = true;
+                status.queuePosition = currentQueuePosition;
             }
 
             if (modelInstance.complete === true) {
@@ -248,11 +250,14 @@ var Download = module.exports = function(dependencies, modelInstance) {
                         download(server);
                     });
                     queued = true;
-                    dependencies.serverQueue.queue(server.id, token);
                     token.on('rejected', function() {
                         queued = false;
                         restartDownload();
                     });
+                    token.on('position-change', function(newPosition) {
+                        currentQueuePosition = newPosition;
+                    });
+                    dependencies.serverQueue.queue(server.id, token);
                 }).error(function() {
                     console.log('Server not found');
                     return stopDownload();

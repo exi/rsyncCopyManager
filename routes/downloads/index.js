@@ -2,6 +2,30 @@ var database = require('../../database.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
 
+function getDownloads(user) {
+    var p = new Promise();
+
+    function resolve(servers) {
+        p.resolve(servers);
+    }
+
+    function reject(err) {
+        p.reject(err);
+    }
+
+    if (user.isAdmin) {
+        database(function(err, models) {
+            if (err) {
+                return reject(err);
+            }
+            models.Download.all().success(resolve).error(reject);
+        });
+    } else {
+        user.getDownloads().success(resolve).error(reject);
+    }
+    return p;
+}
+
 function convertDownloadsForView(downloads) {
     var ret = [];
     downloads.forEach(function(download) {
@@ -16,17 +40,37 @@ function convertDownloadsForView(downloads) {
 
 function getDownloadWithId(req, id) {
     var p = new Promise();
-    req.session.user.getDownloads({
-        where: {
-            id: id
-        }
-    }).success(function(downloads) {
-        if (downloads.length > 0) {
-            p.resolve(downloads[0]);
+
+    function resolve(servers) {
+        if (servers.length > 0) {
+            p.resolve(servers[0]);
         } else {
             p.reject();
         }
-    });
+    }
+
+    function reject(err) {
+        p.reject(err);
+    }
+
+    if (req.session.user.isAdmin) {
+        database(function(err, models) {
+            if (err) {
+                return reject(err);
+            }
+            models.Download.findAll({
+                where: {
+                    id: id
+                }
+            }).success(resolve).error(reject);
+        });
+    } else {
+        req.session.user.getDownloads({
+            where: {
+                id: id
+            }
+        }).success(resolve).error(reject);
+    }
 
     return p;
 }
@@ -51,7 +95,7 @@ function sendDownloadList(res, user) {
 module.exports.apply = function(dependencies, app) {
 
     app.post('/downloads', function(req, res) {
-        req.session.user.getDownloads().success(function(downloads) {
+        getDownloads(req.session.user).then(function(downloads) {
             res.render(
                 'downloads',
                 {
@@ -64,7 +108,7 @@ module.exports.apply = function(dependencies, app) {
                     res.json({content: content});
                 }
                 );
-        }).error(function(err) {
+        }, function(err) {
             util.sendError(res, err);
         });
     });
@@ -119,7 +163,11 @@ module.exports.apply = function(dependencies, app) {
                 }
 
                 if (status.queued) {
-                    msgs.push('Queued');
+                    var msg = 'Queued';
+                    if (status.queuePosition !== undefined) {
+                        msg += ' (' + status.queuePosition + ')';
+                    }
+                    msgs.push(msg);
                 }
 
                 content.status = msgs.length > 0 ? msgs.join(',') : content.status;

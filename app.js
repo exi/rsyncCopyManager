@@ -61,7 +61,8 @@ var server = http.createServer(app);
 function listenCallback() {
     process.setuid(config.uid);
     console.log("Express server listening on port %d in %s mode", server.address().port, app.settings.env);
-};
+}
+
 if (config.ip) {
     server.listen(config.port, config.ip, listenCallback);
 } else {
@@ -70,6 +71,7 @@ if (config.ip) {
 
 process.on('uncaughtException', function(e) {
     console.log(e);
+    console.log(e.stack);
     console.trace();
     dependencies.downloadManager.close();
     dependencies.serverManager.close();

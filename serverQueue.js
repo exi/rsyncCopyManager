@@ -13,30 +13,47 @@ var Queue = module.exports.Queue = function(dependencies) {
 
     var servers = {};
 
+    function notifyPositionChange(queue) {
+        console.trace();
+        queue.forEach(function(item, idx) {
+            item.token.emit('position-change', idx);
+        });
+    }
+
+    function cleanQueue(queue) {
+        var l = queue.length;
+        var change = false;
+        for (var i = 0; i < l ; i++) {
+            if (queue[i].finished === true) {
+                queue.splice(i, 1);
+                l--;
+                change = true;
+            }
+        }
+
+        if (change) {
+            notifyPositionChange(queue);
+        }
+    }
+
     function runQueue(serverId) {
         var server = servers[serverId];
         var queue = server.queue;
         if (queue.length > 0) {
             var item = queue[0];
-            if (item.finished === true) {
+            item.token.on('finished', function() {
                 queue.shift();
-                return runQueue(serverId);
-            } else {
-                item.token.on('finished', function() {
-                    queue.shift();
-                    runQueue(serverId);
-                });
-                item.token.start();
-            }
+                notifyPositionChange(queue);
+                runQueue(serverId);
+            });
+            item.token.start();
         }
     }
 
     dependencies.eventBus.on('server-removed', function(serverId) {
         if (servers.hasOwnProperty(serverId)) {
             servers[serverId].queue.forEach(function(item) {
-                if (item.finished === false) {
-                    item.token.emit('reject');
-                }
+                item.token.emit('reject');
             });
             servers[serverId].queue = [];
         }
@@ -51,7 +68,6 @@ var Queue = module.exports.Queue = function(dependencies) {
     api.queue = function(serverId, token) {
         if (!servers.hasOwnProperty(serverId)) {
             servers[serverId] = {
-                removed: false,
                 queue: []
             };
         }
@@ -65,8 +81,10 @@ var Queue = module.exports.Queue = function(dependencies) {
 
         token.on('finished', function() {
             item.finished = true;
+            cleanQueue(servers[serverId]);
         });
         schedule(serverId);
+        notifyPositionChange(servers[serverId].queue);
     };
 
     return api;

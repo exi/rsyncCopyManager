@@ -4,6 +4,30 @@ var config = require('../../config.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
 
+function getServers(user) {
+    var p = new Promise();
+
+    function resolve(servers) {
+        p.resolve(servers);
+    }
+
+    function reject(err) {
+        p.reject(err);
+    }
+
+    if (user.isAdmin) {
+        database(function(err, models) {
+            if (err) {
+                return reject(err);
+            }
+            models.Server.all().success(resolve).error(reject);
+        });
+    } else {
+        user.getServers().success(resolve).error(reject);
+    }
+    return p;
+}
+
 function convertServersForView(servers) {
     var ret = [];
     servers.forEach(function(server) {
@@ -23,7 +47,7 @@ function convertServersForView(servers) {
 }
 
 function sendServerList(res, user) {
-    user.getServers().success(function(servers) {
+    getServers(user).then(function(servers) {
         servers = convertServersForView(servers);
         res.render(
             'servers-list',
@@ -35,31 +59,51 @@ function sendServerList(res, user) {
                 util.sendSuccess(res, content);
             }
         );
-    }).error(function(err) {
-        util.sendError(res, err);
+    }, function(err) {
+        util.sendError(err);
     });
 }
 
 function getServerWithId(req, id) {
     var p = new Promise();
-    req.session.user.getServers({
-        where: {
-            id: id
-        }
-    }).success(function(servers) {
+
+    function resolve(servers) {
         if (servers.length > 0) {
             p.resolve(servers[0]);
         } else {
             p.reject();
         }
-    });
+    }
+
+    function reject(err) {
+        p.reject(err);
+    }
+
+    if (req.session.user.isAdmin) {
+        database(function(err, models) {
+            if (err) {
+                return reject(err);
+            }
+            models.Server.findAll({
+                where: {
+                    id: id
+                }
+            }).success(resolve).error(reject);
+        });
+    } else {
+        req.session.user.getServers({
+            where: {
+                id: id
+            }
+        }).success(resolve).error(reject);
+    }
 
     return p;
 }
 
 module.exports.apply = function(dependencies, app) {
     app.post('/servers', function(req, res) {
-        req.session.user.getServers().success(function(servers) {
+        getServers(req.session.user).then(function(servers) {
             res.render(
                 'servers',
                 {
@@ -72,8 +116,8 @@ module.exports.apply = function(dependencies, app) {
                     }
                     util.sendSuccess(res, content);
                 }
-                );
-        }).error(function(err) {
+            );
+        }, function(err) {
             util.sendError(res, err);
         });
     });
