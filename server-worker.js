@@ -25,7 +25,7 @@ var Server = function(modelInstance) {
         if (stop) {
             return;
         }
-        checkTimer = setTimeout(periodicCheck, 1000);
+        checkTimer = setTimeout(periodicCheck, 1000 * 60);
     }
 
     function stopTimer() {
@@ -221,9 +221,9 @@ var Server = function(modelInstance) {
 
     function periodicCheck() {
         var fstime = modelInstance.last_filelist_update;
-        var checkintervall = config.fs_check_interval * 60 * 1000;
+        var checkinterval = config.fs_check_interval * 60 * 1000;
 
-        if (!fstime || fstime === null || fstime.getTime() + checkintervall < Date.now()) {
+        if (!fstime || fstime === null || fstime.getTime() + checkinterval < Date.now()) {
             checkFileList();
         }
 
