@@ -35,6 +35,27 @@ define(['jquery'], function($) {
                     type: 'POST'
                 });
             });
+
+            $('.filelist-search').livequery(function() {
+                this.lastval = '';
+                $(this).bind('keyup', function() {
+                    var val = $(this).val();
+                    if (this.lastval === val) {
+                        return;
+                    }
+
+                    clearTimeout(this.submitTimer);
+                    var this_ = this;
+                    this.submitTimer = setTimeout(function() {
+                        this.lastval = val;
+                        var words = val.split(' ');
+                        $('.filelist-tree').empty();
+                        $('.filelist-tree').fileTree({ root: '/', script: '/filelist/getDir', searchWords: words }, fileClickHandler);
+                    }, 300);
+                });
+            }, function() {
+                $(this).unbind('keypress');
+            });
         }
     };
 });

@@ -15,37 +15,96 @@ var pathmapper = module.exports = function(dependencies) {
 
     var pathmap = createFSEntry();
 
-    api.getDirectoryContent = function(path) {
-        var p = new Promise();
+    function buildTree(fsentries) {
+        var root = createFSEntry();
+        fsentries.forEach(function(fse) {
+            addEntry(root, fse);
+        });
+        return root;
+    }
 
-        startupPromise.then(function(models) {
-            var parts = path.split('/');
-            var basemap = pathmap;
-            if (path !== '') {
-                for (var idx = 0; idx < parts.length; idx++) {
-                    var part = parts[idx];
-                    if (!basemap.contents.hasOwnProperty(part)) {
-                        return p.reject('Path not found');
-                    } else {
-                        basemap = basemap.contents[part];
-                    }
+    function addEntry(root, fse) {
+        var parts = fse.path.split('/');
+        var basemap = root;
+        parts.forEach(function(part, idx) {
+            if (!basemap.contents.hasOwnProperty(part)) {
+                var stats;
+                if (idx === parts.length - 1) {
+                    stats = fse;
+                } else {
+                    stats = {
+                        isDir: true,
+                        size: 0,
+                        path: parts.slice(0, idx + 1).join('/')
+                    };
+                }
+
+                basemap.contents[part] = createFSEntry(stats);
+            }
+            basemap = basemap.contents[part];
+        });
+        return root;
+    }
+
+    function getContent(root, path) {
+        var parts = path.split('/');
+        var basemap = root;
+        if (path !== '') {
+            for (var idx = 0; idx < parts.length; idx++) {
+                var part = parts[idx];
+                if (!basemap.contents.hasOwnProperty(part)) {
+                    return null;
+                } else {
+                    basemap = basemap.contents[part];
                 }
             }
-            return p.resolve(basemap);
+        }
+        return basemap;
+    }
+
+    api.getDirectoryContent = function(path, searchWords) {
+        var p = new Promise();
+        searchWords = searchWords || [];
+
+        startupPromise.then(function(models) {
+            if (searchWords.length === 0) {
+                var ret = getContent(pathmap, path);
+                if (ret === null) {
+                    return p.reject('Path not found');
+                }
+                return p.resolve(ret);
+            } else {
+                var where = [];
+                var clauses = [];
+                var replacements = [];
+                searchWords.forEach(function(word) {
+                    clauses.push('path LIKE ?');
+                    replacements.push('%' + word + '%');
+                });
+
+                where = [clauses.join(' AND ')].concat(replacements);
+
+                models.FSEntry.findAll({
+                    where: where
+                }).done(function(err, fsentries) {
+                    if (err) {
+                        return p.reject(err);
+                    }
+
+                    var ret = getContent(buildTree(fsentries), path);
+                    if (ret === null) {
+                        return p.reject('Path not found');
+                    }
+                    p.resolve(ret);
+                });
+            }
         });
 
         return p;
     };
 
     api.addEntry = function(fse) {
-        var parts = fse.path.split('/');
-        var basemap = pathmap;
-        parts.forEach(function(part, idx) {
-            if (!basemap.contents.hasOwnProperty(part)) {
-                basemap.contents[part] = createFSEntry(idx === parts.length - 1 ? fse : undefined);
-            }
-            basemap = basemap.contents[part];
-        });
+        pathmap = addEntry(pathmap, fse);
     };
 
     api.delEntry = function(path) {
@@ -80,7 +139,7 @@ var pathmapper = module.exports = function(dependencies) {
 
     database(function(err, models) {
         models.FSEntry.findAll().success(function(fsentries) {
-            fsentries.forEach(api.addEntry);
+            pathmap = buildTree(fsentries);
             startupPromise.resolve(models);
         });
     });

@@ -46,7 +46,8 @@ module.exports.apply = function(dependencies, app) {
         if (req.body.dir !== undefined) {
             var dir = decodeURIComponent(req.body.dir);
             dir = dir.length === 1 ? '' : dir.substring(1, dir.length - 1);
-            dependencies.pathMapper.getDirectoryContent(dir).then(function(fse) {
+            var words = req.body.searchWords || [];
+            dependencies.pathMapper.getDirectoryContent(dir, words).then(function(fse) {
                 var dirs = [];
                 var files = [];
                 for (var name in fse.contents) {
