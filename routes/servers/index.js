@@ -216,7 +216,6 @@ module.exports.apply = function(dependencies, app) {
         }
         getServerWithId(req, req.body.id).then(function(server) {
             dependencies.serverManager.getServerStatus(server.id).then(function(status) {
-                var content = 'Idle';
                 var msgs = [];
 
                 if (status.fsCheckInProgress === true) {
@@ -231,7 +230,19 @@ module.exports.apply = function(dependencies, app) {
                     msgs.push('Offline');
                 }
 
-                content = msgs.length === 0 ? content : msgs.join(', ');
+                if (status.serverOffline === true) {
+                    msgs.push('Offline');
+                }
+
+                var msg = msgs.length === 0 ? 'Idle' : msgs.join(', ');
+                var content = {
+                    msg: msg
+                };
+
+                if (status.lastErrorOutput) {
+                    content.errorOutput = status.lastErrorOutput;
+                }
+
                 util.sendSuccess(res, content);
             }, function(status) {
                 util.sendError(res, status);

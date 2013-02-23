@@ -135,13 +135,14 @@ var filelist = module.exports.filelist = function (options) {
         var self = this;
         var filelistregex = /([d\-])[rwx\-]{9}\s+(\d+)\s+\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}\s(.*)/;
         var stdoutdata = '';
+        var stderrdata = '';
 
         rsync.stdout.on('data', function (data) {
             stdoutdata += data;
         });
 
         rsync.stderr.on('data', function (data) {
-            data = 'err: ' + data;
+            stderrdata += data;
         });
 
         rsync.on('exit', function (code) {
@@ -161,7 +162,7 @@ var filelist = module.exports.filelist = function (options) {
                 });
                 self.emit('finish', filelist);
             } else {
-                self.emit('error', code);
+                self.emit('error', code, stderrdata);
             }
         });
     } catch (error) {

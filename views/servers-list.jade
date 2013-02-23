@@ -8,8 +8,8 @@ if (servers.length > 0)
         th Limit
         th Status
         th
-    tbody
-      each server in servers
+    each server in servers
+      tbody.server-status(data-server-id="#{server.id}")
         tr
           td= server.hostname
           td= server.username
@@ -18,9 +18,12 @@ if (servers.length > 0)
             .input-append
               input.span1.server-limit(placeholder="Limit", value="#{server.limit}", type="text", data-server-id="#{server.id}")
               span.add-on KB
-          td.server-status(data-server-id="#{server.id}")
+          td.server-status-text
           td
             button.btn.btn-primary.server-rescan(type="button", data-server-id="#{server.id}") Rescan
             button.btn.btn-danger.server-delete(type="button", data-server-id="#{server.id}") Delete
+        tr.server-status-error-container(style="display: none;")
+          td(colspan="6")
+            pre.server-status-error-output
 else
   p You did not add any servers yet.

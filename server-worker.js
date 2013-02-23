@@ -17,6 +17,7 @@ var Server = function(modelInstance) {
     var checkFileListPromise = null;
     var waitForClose = false;
     var serverOffline;
+    var lastErrorOutput = null;
     var rsyncp;
 
     function resetTimer() {
@@ -89,6 +90,10 @@ var Server = function(modelInstance) {
             status.serverOffline = true;
         }
 
+        if (lastErrorOutput) {
+            status.lastErrorOutput = lastErrorOutput;
+        }
+
         p.resolve(status);
         return p;
     };
@@ -131,6 +136,7 @@ var Server = function(modelInstance) {
         startedFsCheck();
 
         serverOffline = false;
+        lastErrorOutput = null;
         rsyncp = new rsync.filelist({
             keyfile: config.keyfile,
             username: modelInstance.username,
@@ -138,10 +144,10 @@ var Server = function(modelInstance) {
             src: modelInstance.path
         });
 
-        rsyncp.on('error', function(err) {
-            console.error(consolePrefix + ' fscheck failed:');
-            console.error(err);
+        rsyncp.on('error', function(code, msg) {
+            console.error(consolePrefix + ' fscheck failed: ' + code);
             serverOffline = true;
+            lastErrorOutput = msg;
             finishedFsCheck();
         });
 
