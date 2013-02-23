@@ -63,7 +63,8 @@ module.exports.apply = function(dependencies, app) {
                                 name: name,
                                 rel: '/' + item.stats.path,
                                 ext: getExtFromName(name),
-                                path: item.stats.path
+                                path: item.stats.path,
+                                size: util.convertToHumanReadableSize(item.stats.size)
                             });
                         }
                     }

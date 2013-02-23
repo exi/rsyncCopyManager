@@ -5,5 +5,6 @@ ul.jquerFileTree(style="display: none;")
       a.filelist-download(data-filelist-path="#{dir.path}", href="#", rel="#{dir.rel}") download
   each file in files
     li.file(class="ext_" + file.ext)
-      a(href="#", rel="#{file.rel}")= file.name
+      span= file.name
+      span= file.size
       a.filelist-download(data-filelist-path="#{file.path}", href="#", rel="#{file.rel}") download

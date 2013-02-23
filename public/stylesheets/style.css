@@ -34,8 +34,9 @@
 .jqueryFileTree li {
   padding-left: 20px;
 }
-.jqueryFileTree a {
-  padding-left: 5px;
+.jqueryFileTree a,
+.jqueryFileTree span {
+  padding-right: 5px;
 }
 body {
   padding-top: 40px;

@@ -96,7 +96,7 @@ module.exports.apply = function(dependencies, app) {
                     }
 
                     if (dls.bytes) {
-                        content.transferred = dls.bytes + ' B';
+                        content.transferred = util.convertToHumanReadableSize(dls.bytes);
                     }
 
                     if (dls.rate) {
