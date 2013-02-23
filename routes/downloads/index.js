@@ -13,32 +13,29 @@ function getDownloads(user) {
         p.reject(err);
     }
 
-    if (user.isAdmin) {
-        database(function(err, models) {
-            if (err) {
-                return reject(err);
-            }
-            models.Download.all().success(resolve).error(reject);
-        });
-    } else {
-        user.getDownloads().success(resolve).error(reject);
-    }
+    database(function(err, models) {
+        if (err) {
+            return reject(err);
+        }
+        models.Download.all().success(resolve).error(reject);
+    });
     return p;
 }
 
-function convertDownloadsForView(downloads) {
+function convertDownloadsForView(downloads, user) {
     var ret = [];
     downloads.forEach(function(download) {
         ret.push({
             id: download.id,
-            path: download.path
+            path: download.path,
+            canDelete: user.isAdmin || download.UserId === user.id ? true : false
         });
     });
 
     return ret;
 }
 
-function getDownloadWithId(req, id) {
+function getDownloadWithId(req, id, permissive) {
     var p = new Promise();
 
     function resolve(servers) {
@@ -53,7 +50,7 @@ function getDownloadWithId(req, id) {
         p.reject(err);
     }
 
-    if (req.session.user.isAdmin) {
+    if (req.session.user.isAdmin || permissive) {
         database(function(err, models) {
             if (err) {
                 return reject(err);
@@ -79,7 +76,7 @@ function sendDownloadList(res, user) {
     user.getDownloads().success(function(downloads) {
         res.render(
             'downloads-list',
-            { downloads: convertDownloadsForView(downloads) },
+            { downloads: convertDownloadsForView(downloads, user) },
             function(err, content) {
                 if (err) {
                     return util.sendError(res, err);
@@ -99,7 +96,7 @@ module.exports.apply = function(dependencies, app) {
             res.render(
                 'downloads',
                 {
-                    downloads: convertDownloadsForView(downloads)
+                    downloads: convertDownloadsForView(downloads, req.session.user)
                 },
                 function(err, content) {
                     if (err) {
@@ -117,7 +114,7 @@ module.exports.apply = function(dependencies, app) {
         if (!req.body || !req.body.id) {
             return util.sendError(res, 'Invalid request!');
         }
-        getDownloadWithId(req, req.body.id).then(function(download) {
+        getDownloadWithId(req, req.body.id, true).then(function(download) {
             dependencies.downloadManager.getDownloadStatus(req.body.id).then(function(status) {
                 var content = {
                     transferred: 0,

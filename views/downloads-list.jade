@@ -19,7 +19,8 @@ if (downloads.length > 0)
           td.download-status-rate
           td.download-status-text
           td
-            button.btn.btn-danger.download-delete(type="button", data-loading-text="Deleting...", data-download-id="#{download.id}") Delete
+            if (download.canDelete === true)
+              button.btn.btn-danger.download-delete(type="button", data-loading-text="Deleting...", data-download-id="#{download.id}") Delete
 
 else
   p No active downloads.
