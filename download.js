@@ -255,6 +255,8 @@ var Download = module.exports = function(dependencies, modelInstance) {
                     return resetDownloadTimer();
                 }
 
+                noMatchingServer = false;
+
                 var fse;
                 var servers = [];
                 for (var i in fses) {
@@ -276,10 +278,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
                     servers.sort(sort);
                     fse = servers[0].fse;
                 }
-
-                console.log('using server ' + fse.ServerId);
-
-                noMatchingServer = false;
 
                 fse.getServer().success(function(server) {
                     token = new Token(function() {

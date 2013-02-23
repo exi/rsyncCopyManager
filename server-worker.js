@@ -135,8 +135,6 @@ var Server = function(modelInstance) {
         console.log('checking files for server: ' + modelInstance.id);
         startedFsCheck();
 
-        serverOffline = false;
-        lastErrorOutput = null;
         rsyncp = new rsync.filelist({
             keyfile: config.keyfile,
             username: modelInstance.username,
@@ -152,6 +150,8 @@ var Server = function(modelInstance) {
         });
 
         rsyncp.on('finish', function(filelist) {
+            lastErrorOutput = null;
+            serverOffline = false;
             database(function(err, models) {
                 if (err) {
                     console.error(err);
