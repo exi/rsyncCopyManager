@@ -33,14 +33,14 @@ module.exports = function(cb) {
             sequelize.sync().success(function() {
                 synced = true;
                 cbs.forEach(function(cb) {
-                    cb(null, models);
+                    cb(null, models, sequelize);
                 });
             }).error(function(err) {
-                throw err;
+                cb(err);
             });
         }
     } else {
-        cb(null, models);
+        cb(null, models, sequelize);
     }
 };
 

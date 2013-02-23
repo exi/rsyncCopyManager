@@ -14,7 +14,6 @@ var Queue = module.exports.Queue = function(dependencies) {
     var servers = {};
 
     function notifyPositionChange(queue) {
-        console.trace();
         queue.forEach(function(item, idx) {
             item.token.emit('position-change', idx);
         });

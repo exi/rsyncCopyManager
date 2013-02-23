@@ -41,13 +41,9 @@ var Server = function(modelInstance) {
         var p = new Promise();
 
         api.close().then(function() {
-            modelInstance.getFSEntries().success(function(fses) {
-                var chain = new database.chain();
-                fses.forEach(function(fse) {
-                    chain.add(fse.destroy());
-                });
-                chain.run().success(function() {
-                    modelInstance.destroy().success(function() {
+            database(function(err, models, sequelize) {
+                sequelize.query('DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ';').done(function() {
+                    modelInstance.destroy().done(function() {
                         p.resolve();
                     });
                 });

@@ -32,8 +32,6 @@ function convertServersForView(servers) {
     var ret = [];
     servers.forEach(function(server) {
         var limit = !server.bwlimit ? '0' : server.bwlimit;
-        console.log('limit: ');
-        console.log(limit);
         ret.push({
             id: server.id,
             username: server.username,
