@@ -59,6 +59,15 @@ var Server = module.exports = function(dependencies, serverId) {
         return p;
     };
 
+    api.rescan = function() {
+        var p = new Promise();
+        startupPromise.then(function() {
+            console.log('sending rescan command');
+            sendMessage({ command: 'rescan' });
+        });
+        return p;
+    };
+
     api.getStatus = function() {
         var p = new Promise();
         startupPromise.then(function() {

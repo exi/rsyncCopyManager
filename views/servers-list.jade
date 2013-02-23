@@ -20,6 +20,7 @@ if (servers.length > 0)
               span.add-on KB
           td.server-status(data-server-id="#{server.id}")
           td
-            button.btn.btn-danger.server-delete(type="button", data-loading-text="Deleting...", data-server-id="#{server.id}") Delete
+            button.btn.btn-primary.server-rescan(type="button", data-server-id="#{server.id}") Rescan
+            button.btn.btn-danger.server-delete(type="button", data-server-id="#{server.id}") Delete
 else
   p You did not add any servers yet.

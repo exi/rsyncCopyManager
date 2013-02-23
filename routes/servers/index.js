@@ -174,6 +174,19 @@ module.exports.apply = function(dependencies, app) {
         });
     });
 
+    app.post('/servers/rescan', function(req, res) {
+        if (!req.body || !req.body.id) {
+            return util.sendError(res, 'Invalid request!');
+        }
+
+        getServerWithId(req, req.body.id).then(function(server) {
+            dependencies.serverManager.rescanServer(server.id);
+            util.sendSuccess(res);
+        }, function() {
+            util.sendError(res, 'Server not found!');
+        });
+    });
+
     app.post('/servers/setLimit', function(req, res) {
         if (!req.body || !req.body.id || !req.body.limit) {
             return util.sendError(res, 'Invalid request!');

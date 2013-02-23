@@ -44,6 +44,16 @@ define(['jquery'], function($) {
                 });
             });
 
+            $('.server-rescan').livequery('click', function(event) {
+                var id = $(this).attr('data-server-id');
+                $(this).addClass('loading');
+                $.ajax({
+                    url: '/servers/rescan',
+                    data: { id: id },
+                    type: 'POST'
+                });
+            });
+
             $('.server-status').livequery(function() {
                 var id = $(this).attr('data-server-id');
                 var this_ = this;

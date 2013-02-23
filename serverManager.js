@@ -32,6 +32,19 @@ var ServerManager = module.exports = function(dependencies) {
         return p;
     };
 
+    api.rescanServer = function(serverId) {
+        var p = new Promise();
+
+        if (servers.hasOwnProperty(serverId)) {
+            var server = servers[serverId].manager;
+            console.log('sm rescan ' + serverId);
+            server.rescan();
+        }
+        p.resolve();
+
+        return p;
+    };
+
     api.getServerStatus = function(serverId) {
         var p = new Promise();
         if (servers.hasOwnProperty(serverId)) {

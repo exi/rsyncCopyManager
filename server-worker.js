@@ -93,6 +93,14 @@ var Server = function(modelInstance) {
         return p;
     };
 
+    api.rescan = function() {
+        if (stop) {
+            return;
+        }
+
+        checkFileList();
+    };
+
     function startedFsCheck() {
         fsCheckInProgress = true;
         checkFileListPromise = new Promise();
@@ -270,6 +278,13 @@ process.on('message', function(data) {
                 instance.closeAndDelete().then(function() {
                     success({});
                 });
+            });
+        }
+
+        if (data.command === 'rescan') {
+            startupPromise.then(function() {
+                instance.rescan();
+                success({});
             });
         }
     }
