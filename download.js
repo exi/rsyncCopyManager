@@ -27,40 +27,48 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var restart = false;
     var currentQueuePosition = 0;
     var offlineServers = {};
+    var lastActivity = null;
 
     api.getStatus = function() {
         var p = new Promise();
         startupPromise.then(function () {
             var status = {};
 
-            if (downloading) {
-                status.active = true;
-            }
-
-            if (downloadStatus !== null) {
-                status.downloadStatus = downloadStatus;
-            }
-
-            if (fileStatus !== null) {
-                status.fileStatus = fileStatus;
-            }
-
-            if (noMatchingServer) {
-                status.noMatchingServer = true;
-            }
-
-            if (queued) {
-                status.queued = true;
-                status.queuePosition = currentQueuePosition;
-            }
-
             if (modelInstance.complete === true) {
                 status.complete = true;
+            } else {
+                if (serverOffline) {
+                    status.serverOffline = true;
+                    if (lastActivity) {
+                        status.lastActivity = lastActivity;
+                    }
+                } else if (noMatchingServer) {
+                    status.noMatchingServer = true;
+                    if (lastActivity) {
+                        status.lastActivity = lastActivity;
+                    }
+                } else {
+                    if (downloading) {
+                        status.active = true;
+                    }
+
+                    if (downloadStatus) {
+                        status.downloadStatus = downloadStatus;
+                    }
+
+                    if (fileStatus) {
+                        status.fileStatus = fileStatus;
+                    }
+
+                    if (queued) {
+                        status.queued = true;
+                        status.queuePosition = currentQueuePosition;
+                    }
+                }
+
             }
 
-            if (serverOffline) {
-                status.serverOffline = true;
-            }
+
 
             console.log(status);
             p.resolve(status);
@@ -132,6 +140,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     function updateLastSeen(server) {
         server.last_seen = new Date();
         server.save(['last_seen']);
+        lastActivity = new Date();
     }
 
     function download(server) {
@@ -172,11 +181,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         });
 
         rsyncp.on('finish', function() {
-            downloadStatus.rate = 0;
-            downloadStatus.percent = modelInstance.progress = 100;
             modelInstance.complete = true;
-            downloadStatus = null;
-            fileStatus = null;
             modelInstance.save();
             onrsyncpEnd();
             updateLastSeen(server);
@@ -325,6 +330,10 @@ var Download = module.exports = function(dependencies, modelInstance) {
             percent: modelInstance.progress
         };
         startupPromise.then(startDownload);
+    }
+
+    if (modelInstance.last_seen !== null) {
+        lastActivity = modelInstance.last_seen;
     }
 
     process.on('exit', function() {

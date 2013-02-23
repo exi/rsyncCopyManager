@@ -12,15 +12,15 @@ define(['jquery'], function($) {
                     }).always(function(data) {
                         if (data && data.content) {
                             var content = data.content;
-                            if (content.status) {
+                            if (content.status !== undefined) {
                                 $(this_).find('.download-status-text').html(content.status);
                             }
 
-                            if (content.transferred) {
+                            if (content.transferred !== undefined) {
                                 $(this_).find('.download-status-transferred').html(content.transferred);
                             }
 
-                            if (content.progress) {
+                            if (content.progress !== undefined) {
                                 $(this_).find('.download-status-progress-bar').css('width', content.progress + '%');
                             }
 
