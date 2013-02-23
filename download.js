@@ -15,6 +15,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var downloading = false;
     var serverOffline = false;
     var downloadStatus = null;
+    var fileStatus = null;
     var rsyncp;
     var stop = false;
     var exitPromise;
@@ -25,6 +26,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var currentServer = null;
     var restart = false;
     var currentQueuePosition = 0;
+    var offlineServers = {};
 
     api.getStatus = function() {
         var p = new Promise();
@@ -37,6 +39,10 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
             if (downloadStatus !== null) {
                 status.downloadStatus = downloadStatus;
+            }
+
+            if (fileStatus !== null) {
+                status.fileStatus = fileStatus;
             }
 
             if (noMatchingServer) {
@@ -155,6 +161,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
             modelInstance.progress = data.progress;
             modelInstance.save();
             updateLastSeen(server);
+            console.log('using server ' + server.id);
+        });
+
+        rsyncp.on('files', function(data) {
+            fileStatus = data;
         });
 
         rsyncp.on('finish', function() {
@@ -162,6 +173,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
             downloadStatus.percent = modelInstance.progress = 100;
             modelInstance.complete = true;
             downloadStatus = null;
+            fileStatus = null;
             modelInstance.save();
             onrsyncpEnd();
             updateLastSeen(server);
@@ -176,6 +188,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
             if (restart === true) {
                 restartDownload();
             } else {
+                offlineServers[server.id] = new Date();
                 finishToken();
                 resetDownloadTimer();
             }
@@ -200,7 +213,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         }
 
         clearTimeout(downloadTimer);
-        downloadtimer = setTimeout(startDownload, config.download_retry_interval * 60 * 1000);
+        downloadtimer = setTimeout(startDownload, parseInt(config.download_retry_interval * 60 * 1000, 10));
     }
 
     function restartDownload() {
@@ -228,11 +241,35 @@ var Download = module.exports = function(dependencies, modelInstance) {
             return;
         }
         startupPromise.then(function(models) {
-            models.FSEntry.find({
+            models.FSEntry.findAll({
                 where: {
                     path: modelInstance.path
                 }
-            }).success(function(fse) {
+            }).success(function(fses) {
+                var fse;
+                var servers = [];
+                for (var i in fses) {
+                    if (!offlineServers.hasOwnProperty(fses[i].ServerId)) {
+                        fse = fses[i];
+                        break;
+                    } else {
+                        servers.push({
+                            when: offlineServers[fses[i].ServerId].getTime(),
+                            fse: fses[i]
+                        });
+                    }
+                }
+
+                if (fse === undefined) {
+                    var sort = function(a, b) {
+                        return a.when - b.when;
+                    };
+                    servers.sort(sort);
+                    fse = servers[0].fse;
+                }
+
+                console.log('using server ' + fse.ServerId);
+
                 if (stop) {
                     return stopDownload();
                 }
@@ -250,7 +287,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
                         download(server);
                     });
                     queued = true;
-                    token.on('rejected', function() {
+                    token.on('reject', function() {
                         queued = false;
                         restartDownload();
                     });

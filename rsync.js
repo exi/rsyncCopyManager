@@ -71,6 +71,7 @@ var download = module.exports.download = function (options) {
     try {
         rsync = spawn('rsync', args);
         var progressregex = /\s*(\d+)\s+(\d+)%\s+(\d*\.*\d+[a-zA-Z]B\/s)\s*(\d+:\d+:\d+)/;
+        var xferregex = /to-check=(\d+)\/(\d+)\)/;
         var self = this;
 
         rsync.stdout.on('data', function (data) {
@@ -81,6 +82,13 @@ var download = module.exports.download = function (options) {
                     percent: m[2],
                     rate: m[3],
                     eta: m[4]
+                });
+            }
+            if (xferregex.test(data)) {
+                var m = xferregex.exec(data);
+                self.emit('files', {
+                    left: m[1],
+                    total: m[2]
                 });
             }
         });

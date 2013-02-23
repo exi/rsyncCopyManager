@@ -50,7 +50,9 @@ var Queue = module.exports.Queue = function(dependencies) {
     }
 
     dependencies.eventBus.on('server-removed', function(serverId) {
+        console.log('server queue remove' + serverId);
         if (servers.hasOwnProperty(serverId)) {
+            console.log('reallay server queue remove' + serverId);
             servers[serverId].queue.forEach(function(item) {
                 item.token.emit('reject');
             });

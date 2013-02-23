@@ -148,6 +148,10 @@ module.exports.apply = function(dependencies, app) {
                     }
                 }
 
+                if (status.fileStatus) {
+                    msgs.push('' + status.fileStatus.left + ' left (' + status.fileStatus.total + ' total)');
+                }
+
                 if (status.complete) {
                     msgs.push('Complete');
                     content.progress = 100;
