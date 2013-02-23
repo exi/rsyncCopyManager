@@ -246,6 +246,16 @@ var Download = module.exports = function(dependencies, modelInstance) {
                     path: modelInstance.path
                 }
             }).success(function(fses) {
+                if (stop) {
+                    return stopDownload();
+                }
+
+                if (fses.length === 0) {
+                    stopDownload();
+                    noMatchingServer = true;
+                    return resetDownloadTimer();
+                }
+
                 var fse;
                 var servers = [];
                 for (var i in fses) {
@@ -269,16 +279,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 }
 
                 console.log('using server ' + fse.ServerId);
-
-                if (stop) {
-                    return stopDownload();
-                }
-
-                if (fse === null) {
-                    stopDownload();
-                    noMatchingServer = true;
-                    return resetDownloadTimer();
-                }
 
                 noMatchingServer = false;
 
