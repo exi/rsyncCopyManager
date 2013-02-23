@@ -71,7 +71,7 @@ define(['jquery'], function($) {
                         if (data.content) {
                             $('.downloads-list').html(data.content);
                         } else {
-                            $(this_).closest('.download-status').remove();
+                            $('.download-status[data-download-id="' + id + '"]').remove();
                         }
                     }
                 });
