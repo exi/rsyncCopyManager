@@ -161,7 +161,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
             modelInstance.progress = data.progress;
             modelInstance.save();
             updateLastSeen(server);
-            console.log('using server ' + server.id);
         });
 
         rsyncp.on('files', function(data) {
