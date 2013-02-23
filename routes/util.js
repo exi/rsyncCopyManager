@@ -43,7 +43,7 @@ module.exports.checkPassword = function(input, hash) {
 };
 
 module.exports.convertToHumanReadableSize = function(bytes) {
-    var factors = [[1, 'B'], [1024, 'KB'], [1048576, 'MB'], [1073741824, 'GB']];
+    var factors = [[1, 'B'], [1024, 'KB'], [1048576, 'MB'], [1073741824, 'GB'], [1099511627776, 'TB']];
     var ret = "";
     for (var i = 0; i < factors.length; i++) {
         if (i + 1 >= factors.length || (bytes > factors[i][0] && bytes < factors[i + 1][0]) || bytes === 0) {
