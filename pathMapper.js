@@ -62,6 +62,30 @@ var pathmapper = module.exports = function(dependencies) {
         return basemap;
     }
 
+    function calculateSizeRecursive(root) {
+        var size = 0;
+
+        if (root.contents) {
+            for (var i in root.contents) {
+                if (root.contents.hasOwnProperty(i)) {
+                    var s = calculateSizeRecursive(root.contents[i]);
+                    size += s;
+                }
+            }
+        }
+
+
+        if (root.stats) {
+            if (root.stats.isDir !== false) {
+                root.stats.size = size;
+            } else if (root.stats.isDir === false) {
+                size += root.stats.size;
+            }
+        }
+
+        return size;
+    }
+
     api.getDirectoryContent = function(path, searchWords) {
         var p = new Promise();
         searchWords = searchWords || [];
@@ -125,23 +149,27 @@ var pathmapper = module.exports = function(dependencies) {
     };
 
     api.reloadAllEntries = function() {
+        var p = new Promise();
         console.log('pm reload');
+
         startupPromise.then(function(models) {
             models.FSEntry.findAll().success(function(fsentries) {
-                pathmap = createFSEntry();
-                fsentries.forEach(api.addEntry);
+                pathmap = buildTree(fsentries);
+                calculateSizeRecursive(pathmap);
+                p.resolve();
             });
         });
+
+        return p;
     };
 
     dependencies.eventBus.on('fs-change', api.reloadAllEntries);
     dependencies.eventBus.on('server-removed', api.reloadAllEntries);
 
     database(function(err, models) {
-        models.FSEntry.findAll().success(function(fsentries) {
-            pathmap = buildTree(fsentries);
-            startupPromise.resolve(models);
-        });
+        pathmap = createFSEntry();
+        startupPromise.resolve(models);
+        api.reloadAllEntries();
     });
 
     return api;
