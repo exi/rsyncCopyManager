@@ -54,27 +54,27 @@ define(['jquery'], function($) {
                 });
             });
 
-            $('.server-status').livequery(function() {
-                var id = $(this).attr('data-server-id');
+            $('.server-status-list').livequery(function() {
                 var this_ = this;
                 var updatefunc = function () {
                     $.ajax({
                         url: '/servers/status',
-                        data: { id: id },
                         type: 'POST'
                     }).always(function(data) {
-                        if (data && data.content) {
-                            data = data.content;
-                            if (data.msg) {
-                                $(this_).find('.server-status-text').html(data.msg);
-                            }
-                            if (data.errorOutput) {
-                                $(this_).find('.server-status-error-container').css('display', '');
-                                var content = data.errorOutput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                                $(this_).find('.server-status-error-output').html(content);
-                            } else {
-                                $(this_).find('.server-status-error-container').css('display', 'none');
-                            }
+                        if (data && data.type === 'success' && data.content && data.content.length) {
+                            data.content.forEach(function(status) {
+                                var parent = $('.server-status[data-server-id="' + status.id + '"]');
+                                if (status.msg) {
+                                    $(parent).find('.server-status-text').html(status.msg);
+                                }
+                                if (status.errorOutput) {
+                                    $(parent).find('.server-status-error-container').css('display', '');
+                                    var content = status.errorOutput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                    $(parent).find('.server-status-error-output').html(content);
+                                } else {
+                                    $(parent).find('.server-status-error-container').css('display', 'none');
+                                }
+                            });
                         }
                         this_.refreshTimer = setTimeout(updatefunc, 2000);
                     });

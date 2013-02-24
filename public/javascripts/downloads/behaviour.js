@@ -2,12 +2,10 @@ define(['jquery'], function($) {
     return {
         apply: function() {
             $('.download-status-list').livequery(function() {
-                var id = $(this).attr('data-download-id');
                 var this_ = this;
                 var updatefunc = function () {
                     $.ajax({
                         url: '/downloads/status',
-                        data: { id: id },
                         type: 'POST'
                     }).always(function(data) {
                         if (data && data.type === 'success' && data.content && data.content.length) {

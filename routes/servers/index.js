@@ -3,6 +3,7 @@ var fs = require('fs');
 var config = require('../../config.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
+var all = require('node-promise').all;
 
 function getServers(user) {
     var p = new Promise();
@@ -211,37 +212,52 @@ module.exports.apply = function(dependencies, app) {
     });
 
     app.post('/servers/status', function(req, res) {
-        if (!req.body || !req.body.id) {
-            return util.sendError(res, 'Invalid request!');
-        }
-        getServerWithId(req, req.body.id).then(function(server) {
-            dependencies.serverManager.getServerStatus(server.id).then(function(status) {
-                var msgs = [];
+        getServers(req.session.user).then(function(servers) {
+            var promises = [];
+            var statuses = [];
+            servers.forEach(function(server) {
+                promises.push(dependencies.serverManager.getServerStatus(server.id).then(function(status) {
+                    var msgs = [];
 
-                if (status.fsCheckInProgress === true) {
-                    msgs.push('Scanning filesystem');
-                }
+                    if (status.fsCheckInProgress === true) {
+                        msgs.push('Scanning filesystem');
+                    }
 
-                if (status.waitForClose === true) {
-                    msgs.push('Closing connection');
-                }
+                    if (status.waitForClose === true) {
+                        msgs.push('Closing connection');
+                    }
 
-                if (status.serverOffline === true) {
-                    msgs.push('Offline');
-                }
+                    if (status.serverOffline === true) {
+                        msgs.push('Offline');
+                    }
 
-                var msg = msgs.length === 0 ? 'Idle' : msgs.join(', ');
-                var content = {
-                    msg: msg
-                };
+                    var msg = msgs.length === 0 ? 'Idle' : msgs.join(', ');
+                    var content = {
+                        id: server.id,
+                        msg: msg
+                    };
 
-                if (status.lastErrorOutput) {
-                    content.errorOutput = status.lastErrorOutput;
-                }
+                    if (status.lastErrorOutput) {
+                        content.errorOutput = status.lastErrorOutput;
+                    }
 
-                util.sendSuccess(res, content);
-            }, function(status) {
-                util.sendError(res, status);
+                    statuses.push(content);
+                }, function(err) {
+                    if (err) {
+                        statuses.push({
+                            id: server.id,
+                            msg: err.message
+                        });
+                    } else {
+                        statuses.push({
+                            id: server.id,
+                            msg: 'Unknown error occured'
+                        });
+                    }
+                }));
+            });
+            all(promises).then(function() {
+                util.sendSuccess(res, statuses);
             });
         }, function() {
             util.sendError(res, 'Server not found!');
