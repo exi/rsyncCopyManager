@@ -41,3 +41,10 @@
 body {
   padding-top: 40px;
 }
+.loading-screen {
+  text-align: center;
+  height: 200px;
+}
+.loading-screen img {
+  padding-top: 190px;
+}

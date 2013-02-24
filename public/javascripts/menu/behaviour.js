@@ -30,19 +30,34 @@ define(['jquery'], function($) {
                 $('.nav > li.active').removeClass('active');
             }
 
+            var loader = null;
+            var placeholder = null;
+
+            $('<img />').attr('src', '/images/pacman.gif').load(function() {
+                placeholder = this;
+            });
+
             function switchMainContent(hash) {
                 var descriptor = pages[hash];
                 $(descriptor.query).livequery('click', function(event) {
-                    var _this = this;
-                    $.ajax({
+                    if (loader !== null) {
+                        loader.abort();
+                    }
+                    $('#mainContainer').empty();
+                    if (placeholder !== null) {
+                        $('.loading-screen').empty().append(placeholder).css('display', '');
+                    }
+                    removeActives();
+                    $(this.parentNode).addClass('active');
+                    loader = $.ajax({
                         url: descriptor.url,
                         context: $('#mainContainer'),
                         type: 'POST'
                     }).done(function(data) {
-                        removeActives();
-                        $(_this.parentNode).addClass('active');
+                        $('.loading-screen').css('display', 'none');
                         $(this).html(data.content);
                         currentHash = hash;
+                        loader = null;
                     });
                 });
             }
