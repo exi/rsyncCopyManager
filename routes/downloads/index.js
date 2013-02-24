@@ -6,8 +6,12 @@ var all = require('node-promise').all;
 function getDownloads(user) {
     var p = new Promise();
 
-    function resolve(servers) {
-        p.resolve(servers);
+    function resolve(downloads) {
+        function sort(a, b) {
+            return a.UserId === user.id ? -1 : 0;
+        }
+        downloads.sort(sort);
+        p.resolve(downloads);
     }
 
     function reject(err) {
@@ -39,9 +43,9 @@ function convertDownloadsForView(downloads, user) {
 function getDownloadWithId(req, id, permissive) {
     var p = new Promise();
 
-    function resolve(servers) {
-        if (servers.length > 0) {
-            p.resolve(servers[0]);
+    function resolve(downloads) {
+        if (downloads.length > 0) {
+            p.resolve(downloads[0]);
         } else {
             p.reject();
         }

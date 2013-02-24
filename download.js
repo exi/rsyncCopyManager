@@ -65,10 +65,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
                         status.queuePosition = currentQueuePosition;
                     }
                 }
-
             }
-
-
 
             console.log(status);
             p.resolve(status);
