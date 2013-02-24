@@ -47,7 +47,8 @@ module.exports.convertToHumanReadableSize = function(bytes) {
     var ret = '';
     for (var i = 0; i < factors.length; i++) {
         if (i + 1 >= factors.length || (bytes > factors[i][0] && bytes < factors[i + 1][0]) || bytes === 0) {
-            ret = Math.floor(bytes / (factors[i][0])) + factors[i][1];
+            var rounded = Math.floor((bytes / (factors[i][0])) * 100);
+            ret = rounded / 100 + factors[i][1];
             break;
         }
     }
