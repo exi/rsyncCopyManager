@@ -8,7 +8,7 @@ function getDownloads(user) {
 
     function resolve(downloads) {
         function sort(a, b) {
-            return a.UserId === user.id ? -1 : 0;
+            return a.UserId === user.id ? -1 : 1;
         }
         downloads.sort(sort);
         p.resolve(downloads);
