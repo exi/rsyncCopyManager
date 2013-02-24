@@ -7,13 +7,6 @@ function getDownloads(user) {
     var p = new Promise();
 
     function resolve(downloads) {
-        function sort(a, b) {
-            if (a.UserId === user.id && b.UserId === user.id) {
-                return b.id - a.id;
-            }
-            return a.UserId === user.id ? -1 : 1;
-        }
-        downloads.sort(sort);
         p.resolve(downloads);
     }
 
@@ -32,6 +25,12 @@ function getDownloads(user) {
 
 function convertDownloadsForView(downloads, user) {
     var ret = [];
+    downloads.sort(function sort(a, b) {
+        if (a.UserId === user.id && b.UserId === user.id) {
+            return a.id - b.id;
+        }
+        return a.UserId === user.id ? -1 : 1;
+    });
     downloads.forEach(function(download) {
         ret.push({
             id: download.id,
@@ -81,7 +80,7 @@ function getDownloadWithId(req, id, permissive) {
 }
 
 function sendDownloadList(res, user) {
-    user.getDownloads().success(function(downloads) {
+    getDownloads(user).then(function(downloads) {
         res.render(
             'downloads-list',
             { downloads: convertDownloadsForView(downloads, user) },
@@ -92,7 +91,7 @@ function sendDownloadList(res, user) {
                 res.json({ type: 'success', content: content });
             }
         );
-    }).error(function(err) {
+    }, function(err) {
         util.sendError(res, err);
     });
 }

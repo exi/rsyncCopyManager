@@ -29,6 +29,7 @@ function buildargs(options, mandatory) {
     if (options.filelist !== true) {
         args.push('--partial');
         args.push('--progress');
+        args.push('--append-verify');
 
         switch (options.compareMode) {
             case 'sizeOnly':
