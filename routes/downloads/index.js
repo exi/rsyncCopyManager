@@ -1,6 +1,7 @@
 var database = require('../../database.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
+var all = require('node-promise').all;
 
 function getDownloads(user) {
     var p = new Promise();
@@ -111,73 +112,92 @@ module.exports.apply = function(dependencies, app) {
     });
 
     app.post('/downloads/status', function(req, res) {
-        if (!req.body || !req.body.id) {
-            return util.sendError(res, 'Invalid request!');
-        }
-        getDownloadWithId(req, req.body.id, true).then(function(download) {
-            dependencies.downloadManager.getDownloadStatus(req.body.id).then(function(status) {
-                var content = {
-                    transferred: 0,
-                    rate: 0,
-                    active: false,
-                    progress: 0,
-                    status: 'Idle'
-                };
-                var msgs = [];
+        getDownloads(req.session.user).then(function(downloads) {
+            var promises = [];
+            var statuses = [];
+            downloads.forEach(function(download) {
+                promises.push(
+                    dependencies.downloadManager.getDownloadStatus(download.id).then(function(status) {
+                        var content = {
+                            id: download.id,
+                            transferred: 0,
+                            rate: 0,
+                            active: false,
+                            progress: 0,
+                            status: 'Idle'
+                        };
+                        var msgs = [];
 
-                if (status.active) {
-                    content.active = true;
-                    msgs.push('Downloading');
-                }
+                        if (status.active) {
+                            content.active = true;
+                            msgs.push('Downloading');
+                        }
 
-                if (status.downloadStatus) {
-                    var dls = status.downloadStatus;
-                    if (dls.percent) {
-                        content.progress = dls.percent;
+                        if (status.downloadStatus) {
+                            var dls = status.downloadStatus;
+                            if (dls.percent) {
+                                content.progress = dls.percent;
+                            }
+
+                            if (dls.bytes) {
+                                content.transferred = util.convertToHumanReadableSize(dls.bytes);
+                            }
+
+                            if (dls.rate) {
+                                content.rate = dls.rate || '';
+                            }
+                        }
+
+                        if (status.fileStatus) {
+                            msgs.push('' + status.fileStatus.left + ' left (' + status.fileStatus.total + ' total)');
+                        }
+
+                        if (status.complete) {
+                            msgs.push('Complete');
+                            content.progress = 100;
+                            content.rate = '';
+                        }
+
+                        if (status.serverOffline) {
+                            msgs.push('Server offline');
+                        }
+
+                        if (status.noMatchingServer) {
+                            msgs.push('No matching server found');
+                        }
+
+                        if (status.queued) {
+                            var msg = 'Queued';
+                            if (status.queuePosition !== undefined) {
+                                msg += ' (' + status.queuePosition + ')';
+                            }
+                            msgs.push(msg);
+                        }
+
+                        content.status = msgs.length > 0 ? msgs.join(',') : content.status;
+                        statuses.push(content);
+                    }, function(err) {
+                        if (err && err.message) {
+                            statuses.push({
+                                id: download.id,
+                                status: err.message
+                            });
+                        } else {
+                            statuses.push({
+                                id: download.id,
+                                status: 'Unknown error appeared'
+                            });
+                        }
                     }
-
-                    if (dls.bytes) {
-                        content.transferred = util.convertToHumanReadableSize(dls.bytes);
-                    }
-
-                    if (dls.rate) {
-                        content.rate = dls.rate || '';
-                    }
-                }
-
-                if (status.fileStatus) {
-                    msgs.push('' + status.fileStatus.left + ' left (' + status.fileStatus.total + ' total)');
-                }
-
-                if (status.complete) {
-                    msgs.push('Complete');
-                    content.progress = 100;
-                    content.rate = '';
-                }
-
-                if (status.serverOffline) {
-                    msgs.push('Server offline');
-                }
-
-                if (status.noMatchingServer) {
-                    msgs.push('No matching server found');
-                }
-
-                if (status.queued) {
-                    var msg = 'Queued';
-                    if (status.queuePosition !== undefined) {
-                        msg += ' (' + status.queuePosition + ')';
-                    }
-                    msgs.push(msg);
-                }
-
-                content.status = msgs.length > 0 ? msgs.join(',') : content.status;
-                res.json({ type: 'success', content: content });
-            }, function(status) {
-                util.sendError(res, status);
+                ));
             });
-        }, function() {
-            util.sendError(res, 'Download not found!');
+
+            all(promises).then(function() {
+                util.sendSuccess(res, statuses);
+            });
+
+        }, function(err) {
+            util.sendError(res, err);
         });
     });
 

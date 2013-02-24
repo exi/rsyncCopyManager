@@ -1,7 +1,7 @@
 define(['jquery'], function($) {
     return {
         apply: function() {
-            $('.download-status').livequery(function() {
+            $('.download-status-list').livequery(function() {
                 var id = $(this).attr('data-download-id');
                 var this_ = this;
                 var updatefunc = function () {
@@ -10,31 +10,33 @@ define(['jquery'], function($) {
                         data: { id: id },
                         type: 'POST'
                     }).always(function(data) {
-                        if (data && data.content) {
-                            var content = data.content;
-                            if (content.status !== undefined) {
-                                $(this_).find('.download-status-text').html(content.status);
-                            }
+                        if (data && data.type === 'success' && data.content && data.content.length) {
+                            data.content.forEach(function(status) {
+                                var row = $(this_).find('.download-status[data-download-id="' + status.id + '"]');
+                                if (status.status !== undefined) {
+                                    $(row).find('.download-status-text').html(status.status);
+                                }
 
-                            if (content.transferred !== undefined) {
-                                $(this_).find('.download-status-transferred').html(content.transferred);
-                            }
+                                if (status.transferred !== undefined) {
+                                    $(row).find('.download-status-transferred').html(status.transferred);
+                                }
 
-                            if (content.progress !== undefined) {
-                                $(this_).find('.download-status-progress-bar').css('width', content.progress + '%');
-                            }
+                                if (status.progress !== undefined) {
+                                    $(row).find('.download-status-progress-bar').css('width', status.progress + '%');
+                                }
 
-                            if (content.active === true) {
-                                $(this_).find('.download-status-progress').addClass('active');
-                            }
+                                if (status.active === true) {
+                                    $(row).find('.download-status-progress').addClass('active');
+                                }
 
-                            if (content.active === false) {
-                                $(this_).find('.download-status-progress').removeClass('active');
-                            }
+                                if (status.active === false) {
+                                    $(row).find('.download-status-progress').removeClass('active');
+                                }
 
-                            if (content.rate !== undefined) {
-                                $(this_).find('.download-status-rate').html(content.rate);
-                            }
+                                if (status.rate !== undefined) {
+                                    $(row).find('.download-status-rate').html(status.rate);
+                                }
+                            });
                         }
                         this_.refreshTimer = setTimeout(updatefunc, 2000);
                     });
