@@ -153,11 +153,13 @@ var filelist = module.exports.filelist = function (options) {
                 lines.forEach(function(line) {
                     if (filelistregex.test(line)) {
                         var m = filelistregex.exec(line);
-                        filelist.push({
-                            isDir: m[1] === 'd',
-                            size: m[2],
-                            path: '' + m[3]
-                        });
+                        if (m[3] !== '.') {
+                            filelist.push({
+                                isDir: m[1] === 'd',
+                                size: m[2],
+                                path: '' + m[3]
+                            });
+                        }
                     }
                 });
                 self.emit('finish', filelist);
