@@ -81,6 +81,9 @@ var DownloadManager = module.exports = function(dependencies) {
         }
 
         models.Download.all().success(function(s) {
+            s.sort(function(a, b) {
+                return a.id - b.id;
+            });
             s.forEach(api.addDownload);
         });
     });

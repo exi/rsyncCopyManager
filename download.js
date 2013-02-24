@@ -67,7 +67,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 }
             }
 
-            console.log(status);
             p.resolve(status);
         });
 
@@ -188,11 +187,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
         rsyncp.on('error', function(code) {
             console.log('got error ' + code);
-            serverOffline = true;
             onrsyncpEnd();
             if (restart === true) {
                 restartDownload();
             } else {
+                serverOffline = true;
                 offlineServers[server.id] = new Date();
                 finishToken();
                 resetDownloadTimer();
@@ -229,11 +228,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
         restart = false;
         if (rsyncp) {
             restart = true;
-            rsyncp.kill();
+            return rsyncp.kill();
         } else if (token) {
             token.emit('finished');
-            startDownload();
         }
+        startDownload();
     }
 
 
@@ -288,10 +287,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 fse.getServer().success(function(server) {
                     token = new Token(function() {
                         download(server);
-                    });
+                    }, modelInstance.id);
                     queued = true;
                     token.on('reject', function() {
                         queued = false;
+                        token = null;
                         restartDownload();
                     });
                     token.on('position-change', function(newPosition) {

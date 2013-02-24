@@ -8,6 +8,9 @@ function getDownloads(user) {
 
     function resolve(downloads) {
         function sort(a, b) {
+            if (a.UserId === user.id && b.UserId === user.id) {
+                return b.id - a.id;
+            }
             return a.UserId === user.id ? -1 : 1;
         }
         downloads.sort(sort);
@@ -229,7 +232,6 @@ module.exports.apply = function(dependencies, app) {
             return util.sendError(res, 'Invalid Request!');
         }
 
-        console.log(req.body);
         getDownloadWithId(req, req.body.id).then(function(download) {
             dependencies.downloadManager.delDownload(download.id, req.body.deleteData === 'true').then(function() {
                 database(function(err, models) {

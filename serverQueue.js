@@ -1,9 +1,10 @@
 var events = require('events');
 var util = require('util');
 
-var Token = module.exports.Token = function(startFunction) {
+var Token = module.exports.Token = function(startFunction, id) {
     events.EventEmitter.call(this);
     this.start = startFunction;
+    this.id = id || 9999999;
 };
 
 util.inherits(Token, events.EventEmitter);
@@ -37,6 +38,7 @@ var Queue = module.exports.Queue = function(dependencies) {
 
     function runQueue(serverId) {
         var server = servers[serverId];
+        server.running = true;
         var queue = server.queue;
         if (queue.length > 0) {
             var item = queue[0];
@@ -45,7 +47,12 @@ var Queue = module.exports.Queue = function(dependencies) {
                 notifyPositionChange(queue);
                 runQueue(serverId);
             });
+            item.token.on('reject', function() {
+                runQueue(serverId);
+            });
             item.token.start();
+        } else {
+            server.running = false;
         }
     }
 
@@ -54,6 +61,7 @@ var Queue = module.exports.Queue = function(dependencies) {
         if (servers.hasOwnProperty(serverId)) {
             console.log('reallay server queue remove' + serverId);
             servers[serverId].queue.forEach(function(item) {
+                console.log('reject token ' + item.token.id)
                 item.token.emit('reject');
             });
             servers[serverId].queue = [];
@@ -61,7 +69,19 @@ var Queue = module.exports.Queue = function(dependencies) {
     });
 
     function schedule(serverId) {
-        if (servers[serverId].queue.length === 1) {
+        var queue = servers[serverId].queue;
+        if (queue.length > 1) {
+            var first = queue[0].token;
+            queue.sort(function(a, b) {
+                return a.token.id - b.token.id;
+            });
+            if (queue[0].token.id !== first.id && servers[serverId].running) {
+                console.log('reject token ' + first.id);
+                first.emit('reject');
+            }
+        }
+
+        if (!servers[serverId].running) {
             runQueue(serverId);
         }
     }
@@ -69,7 +89,8 @@ var Queue = module.exports.Queue = function(dependencies) {
     api.queue = function(serverId, token) {
         if (!servers.hasOwnProperty(serverId)) {
             servers[serverId] = {
-                queue: []
+                queue: [],
+                running: false
             };
         }
 
@@ -84,8 +105,10 @@ var Queue = module.exports.Queue = function(dependencies) {
             item.finished = true;
             cleanQueue(servers[serverId]);
         });
-        schedule(serverId);
-        notifyPositionChange(servers[serverId].queue);
+        process.nextTick(function() {
+            schedule(serverId);
+            notifyPositionChange(servers[serverId].queue);
+        });
     };
 
     return api;
