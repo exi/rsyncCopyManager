@@ -157,7 +157,7 @@ var filelist = module.exports.filelist = function (options) {
                         if (m[3] !== '.') {
                             filelist.push({
                                 isDir: m[1] === 'd',
-                                size: m[2],
+                                size: parseInt(m[2], 10),
                                 path: '' + m[3]
                             });
                         }

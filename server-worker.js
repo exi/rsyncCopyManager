@@ -176,18 +176,45 @@ var Server = function(modelInstance) {
                     var change = false;
 
                     filelist.forEach(function(fse) {
-                        if (!pathmap.hasOwnProperty(fse.path.trim())) {
+                        if (!pathmap.hasOwnProperty(fse.path)) {
                             console.log('add ' + fse.path);
                             var entry = models.FSEntry.build(fse);
                             var p = new Promise();
                             promises.push(p);
                             change = true;
                             entry.save().success(function(entry) {
-                                entry.setServer(modelInstance).success(function(fse) {
+                                entry.setServer(modelInstance).done(function(err, fse) {
+                                    if (err) {
+                                        return p.reject();
+                                    }
                                     p.resolve();
                                 });
                             });
                         } else {
+                            var change = false;
+                            var ofse = pathmap[fse.path];
+                            if (ofse.size !== fse.size) {
+                                ofse.size = fse.size;
+                                change = true;
+                            }
+
+                            if (ofse.isDir !== fse.isDir) {
+                                ofse.isDir = fse.isDir;
+                                change = true;
+                            }
+
+                            if (change) {
+                                var p = new Promise();
+                                promises.push(p);
+                                console.log('update ' + fse.path);
+                                ofse.save().done(function(err) {
+                                    if (err) {
+                                        return p.reject();
+                                    }
+                                    p.resolve();
+                                });
+                            }
+
                             delete pathmap[fse.path];
                         }
                     });

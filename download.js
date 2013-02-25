@@ -79,10 +79,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
         var p = new Promise();
         var deletePromise = new Promise();
 
-        if (token !== null) {
-            token.emit('finished');
-        }
-
         api.close().then(function() {
             deletePromise.resolve();
         });
@@ -94,7 +90,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 var completepath = config.downloadDir + '/' + parts.pop();
 
                 if (deleteData) {
-                    console.log('deleting data');
                     try {
                         var stat = fs.statSync(completepath);
 
@@ -116,6 +111,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     };
 
     api.close = function() {
+        stop = true;
         console.log('download api close');
         var p = new Promise();
 
@@ -125,8 +121,8 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 p.resolve();
             });
             rsyncp.kill();
-            stopDownload();
         } else {
+            finishToken();
             p.resolve();
         }
 
@@ -165,6 +161,9 @@ var Download = module.exports = function(dependencies, modelInstance) {
         rsyncp = new rsync.download(options);
 
         rsyncp.on('progress', function(data) {
+            if (stop) {
+                return;
+            }
             serverOffline = false;
             downloadStatus = data;
             modelInstance.progress = data.progress;
@@ -202,13 +201,17 @@ var Download = module.exports = function(dependencies, modelInstance) {
     function onrsyncpEnd() {
         stopDownload();
         rsyncp = null;
-        exitPromise.resolve();
-        exitPromise = null;
+        if (exitPromise) {
+            exitPromise.resolve();
+            exitPromise = null;
+        }
     }
 
     function finishToken() {
-        token.emit('finished');
-        token = null;
+        if (token) {
+            token.emit('finished');
+            token = null;
+        }
     }
 
     function resetDownloadTimer() {
@@ -229,10 +232,10 @@ var Download = module.exports = function(dependencies, modelInstance) {
         if (rsyncp) {
             restart = true;
             return rsyncp.kill();
-        } else if (token) {
-            token.emit('finished');
+        } else {
+            finishToken();
+            startDownload();
         }
-        startDownload();
     }
 
 
