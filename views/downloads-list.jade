@@ -6,6 +6,7 @@ if (downloads.length > 0)
         th Transferred
         th Progress
         th rate
+        th ETA
         th Status
         th
     tbody
@@ -17,6 +18,7 @@ if (downloads.length > 0)
             .progress.progress-striped.download-status-progress(class=download.active === true ? "active" : "")
               .bar.download-status-progress-bar(style="width: #{download.progress}%")
           td.download-status-rate
+          td.download-status-eta
           td.download-status-text
           td
             if (download.canDelete === true)

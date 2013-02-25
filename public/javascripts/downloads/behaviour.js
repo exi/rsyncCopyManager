@@ -34,6 +34,10 @@ define(['jquery'], function($) {
                                 if (status.rate !== undefined) {
                                     $(row).find('.download-status-rate').html(status.rate);
                                 }
+
+                                if (status.eta !== undefined) {
+                                    $(row).find('.download-status-eta').html(status.eta);
+                                }
                             });
                         }
                         this_.refreshTimer = setTimeout(updatefunc, 2000);

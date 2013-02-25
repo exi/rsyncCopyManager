@@ -129,6 +129,7 @@ module.exports.apply = function(dependencies, app) {
                         rate: 0,
                         active: false,
                         progress: 0,
+                        eta: '',
                         status: 'Idle'
                     };
                     var msgs = [];
@@ -150,6 +151,10 @@ module.exports.apply = function(dependencies, app) {
 
                         if (dls.rate) {
                             content.rate = dls.rate || '';
+                        }
+
+                        if (dls.eta) {
+                            content.eta = dls.eta || '';
                         }
                     }
 
