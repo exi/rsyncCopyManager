@@ -6,6 +6,6 @@ block content
       h2 Login
       - if (error != '')
         .alert= error
-      input.input-block-level(type="text", name="user", placeholder="Username")
-      input.input-block-level(type="password", name="password", placeholder="Password")
-      button.btn.btn-large.btn-primary(type="submit") Login
+      input.input-block-level.login-username(type='text', name='user', placeholder='Username')
+      input.input-block-level(type='password', name='password', placeholder='Password')
+      button.btn.btn-large.btn-primary(type='submit') Login

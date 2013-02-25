@@ -7,24 +7,24 @@
           legend Add Server
           .form-status
           .control-group
-            label.control-label(for="host") Hostname:
+            label.control-label(for='host') Hostname:
             .controls
-              input(type="text", name="hostname", placeholder="Hostname")
+              input(type='text', name='hostname', placeholder='Hostname')
           .control-group
-            label.control-label(for="username") Username:
+            label.control-label(for='username') Username:
             .controls
-              input(type="text", name="username", placeholder="Username")
+              input(type='text', name='username', placeholder='Username')
           .control-group
-            label.control-label(for="path") Path:
+            label.control-label(for='path') Path:
             .controls
-              input(type="text", name="path", placeholder="Path")
+              input(type='text', name='path', placeholder='Path')
           .control-group
             .controls
-              button.btn.btn-primary(href="#") Add Server
+              button.btn.btn-primary(href='#') Add Server
     .span7
       .well
         p Add this pubkey to your authorized_keys file:
-        textarea(rows="10", style="width: 100%; word-wrap: break-word")= pubkey
+        textarea(rows='10', style='width: 100%; word-wrap: break-word')= pubkey
 
   .servers-list
     include servers-list

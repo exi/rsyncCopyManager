@@ -37,5 +37,7 @@ require([
         filelistBehaviour.apply();
         downloadsBehaviour.apply();
         settingsBehaviour.apply();
+
+        $('.login-username').focus();
     });
 });

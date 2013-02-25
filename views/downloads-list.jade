@@ -11,18 +11,18 @@ if (downloads.length > 0)
         th
     tbody
       each download in downloads
-        tr.download-status(data-download-id="#{download.id}")
+        tr.download-status(data-download-id='#{download.id}')
           td= download.path
           td.download-status-transferred
           td
-            .progress.progress-striped.download-status-progress(class=download.active === true ? "active" : "")
-              .bar.download-status-progress-bar(style="width: #{download.progress}%")
+            .progress.progress-striped.download-status-progress(class=download.active === true ? 'active' : '')
+              .bar.download-status-progress-bar(style='width: #{download.progress}%')
           td.download-status-rate
           td.download-status-eta
           td.download-status-text
           td
             if (download.canDelete === true)
-              button.btn.btn-danger.download-delete(type="button", data-loading-text="Deleting...", data-download-id="#{download.id}") Delete
+              button.btn.btn-danger.download-delete(type='button', data-loading-text='Deleting...', data-download-id='#{download.id}') Delete
 
 else
   p No active downloads.
