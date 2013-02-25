@@ -54,3 +54,7 @@ module.exports.convertToHumanReadableSize = function(bytes) {
     }
     return ret;
 };
+
+module.exports.escapeHtml = function(input) {
+    return input.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+};

@@ -234,11 +234,11 @@ module.exports.apply = function(dependencies, app) {
                     var msg = msgs.length === 0 ? 'Idle' : msgs.join(', ');
                     var content = {
                         id: server.id,
-                        msg: msg
+                        msg: util.escapeHtml(msg)
                     };
 
                     if (status.lastErrorOutput) {
-                        content.errorOutput = status.lastErrorOutput;
+                        content.errorOutput = util.escapeHtml(status.lastErrorOutput);
                     }
 
                     statuses.push(content);

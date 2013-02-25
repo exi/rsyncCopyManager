@@ -69,8 +69,7 @@ define(['jquery'], function($) {
                                 }
                                 if (status.errorOutput) {
                                     $(parent).find('.server-status-error-container').css('display', '');
-                                    var content = status.errorOutput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                                    $(parent).find('.server-status-error-output').html(content);
+                                    $(parent).find('.server-status-error-output').html(status.errorOutput);
                                 } else {
                                     $(parent).find('.server-status-error-container').css('display', 'none');
                                 }
