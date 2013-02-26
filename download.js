@@ -200,6 +200,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     function onrsyncpEnd() {
         stopDownload();
         rsyncp = null;
+        currentServer = null;
         if (exitPromise) {
             exitPromise.resolve();
             exitPromise = null;
