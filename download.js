@@ -180,7 +180,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
             modelInstance.save();
             onrsyncpEnd();
             updateLastSeen(server);
-            console.log('finished');
             finishToken();
         });
 

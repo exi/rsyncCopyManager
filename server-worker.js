@@ -177,7 +177,6 @@ var Server = function(modelInstance) {
 
                     filelist.forEach(function(fse) {
                         if (!pathmap.hasOwnProperty(fse.path)) {
-                            console.log('add ' + fse.path);
                             var entry = models.FSEntry.build(fse);
                             var p = new Promise();
                             promises.push(p);
@@ -191,22 +190,23 @@ var Server = function(modelInstance) {
                                 });
                             });
                         } else {
-                            var change = false;
+                            var mod = false;
                             var ofse = pathmap[fse.path];
                             if (ofse.size !== fse.size) {
                                 ofse.size = fse.size;
-                                change = true;
+                                mod = true;
                             }
 
                             if (ofse.isDir !== fse.isDir) {
                                 ofse.isDir = fse.isDir;
-                                change = true;
+                                mod = true;
                             }
 
-                            if (change) {
+                            if (mod) {
                                 var p = new Promise();
                                 promises.push(p);
                                 console.log('update ' + fse.path);
+                                change = true;
                                 ofse.save().done(function(err) {
                                     if (err) {
                                         return p.reject();
@@ -228,7 +228,6 @@ var Server = function(modelInstance) {
                                 change = true;
                                 s.destroy().success(function() {
                                     p.resolve();
-                                    console.log('del ' + path);
                                 });
                             })(pathmap[m], pathmap[m].path);
                         }
