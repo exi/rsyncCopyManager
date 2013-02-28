@@ -1,6 +1,7 @@
 var config = require('./config.js');
 var sequelize = new (require('sequelize'))(config.db.name, config.db.user, config.db.password, {
-    host: config.db.host
+    host: config.db.host,
+    logging: false
 });
 
 var Server = sequelize.import(__dirname + '/activeRecord/Server');

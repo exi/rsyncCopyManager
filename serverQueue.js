@@ -24,7 +24,7 @@ var Queue = module.exports.Queue = function(dependencies) {
         var l = queue.length;
         var change = false;
         for (var i = 0; i < l ; i++) {
-            if (queue[i].finished === true) {
+            if (queue[i].done === true) {
                 queue.splice(i, 1);
                 l--;
                 change = true;
@@ -41,27 +41,33 @@ var Queue = module.exports.Queue = function(dependencies) {
         server.running = true;
         var queue = server.queue;
         if (queue.length > 0) {
-            var item = queue[0];
-            item.token.on('finished', function() {
-                queue.shift();
-                notifyPositionChange(queue);
-                runQueue(serverId);
+            var token = queue[0].token;
+            token.on('finished', function() {
+                console.log('queue finished ' + token.id);
+                server.running = false;
+                token.done = true;
+                cleanQueue(queue);
+                schedule(serverId);
             });
-            item.token.on('reject', function() {
-                runQueue(serverId);
+            token.on('reject', function() {
+                console.log('queue reject ' + token.id);
+                server.running = false;
+                token.done = true;
+                cleanQueue(queue);
+                schedule(serverId);
             });
-            item.token.start();
+            console.log('queue start ' + token.id);
+            token.start();
         } else {
             server.running = false;
         }
     }
 
     dependencies.eventBus.on('server-removed', function(serverId) {
-        console.log('server queue remove' + serverId);
         if (servers.hasOwnProperty(serverId)) {
-            console.log('reallay server queue remove' + serverId);
+            console.log('server queue remove' + serverId);
             servers[serverId].queue.forEach(function(item) {
-                console.log('reject token ' + item.token.id)
+                console.log('reject token ' + item.token.id);
                 item.token.emit('reject');
             });
             servers[serverId].queue = [];
@@ -79,11 +85,15 @@ var Queue = module.exports.Queue = function(dependencies) {
                 console.log('reject token ' + first.id);
                 first.emit('reject');
             }
+            notifyPositionChange(queue);
         }
 
         if (!servers[serverId].running) {
             runQueue(serverId);
         }
+        console.log('queue ' + serverId + ' ' + queue.map(function(item) {
+            return item.token.id;
+        }).join(','));
     }
 
     api.queue = function(serverId, token) {
@@ -95,20 +105,25 @@ var Queue = module.exports.Queue = function(dependencies) {
         }
 
         var item = {
-            finished: false,
+            done: false,
             token: token
         };
 
-        servers[serverId].queue.push(item);
+        var queue = servers[serverId].queue;
+
+        queue.push(item);
+        console.log('queue add ' + token.id + ' (' + (queue.length - 1) + ')');
 
         token.on('finished', function() {
-            item.finished = true;
-            cleanQueue(servers[serverId]);
+            console.log('queue finish ' + token.id);
+            item.done = true;
         });
-        process.nextTick(function() {
-            schedule(serverId);
-            notifyPositionChange(servers[serverId].queue);
+        token.on('reject', function() {
+            console.log('queue finish ' + token.id);
+            item.done = true;
         });
+        schedule(serverId);
+        notifyPositionChange(queue);
     };
 
     return api;

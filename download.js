@@ -60,10 +60,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
                         status.fileStatus = fileStatus;
                     }
 
-                    if (queued) {
-                        status.queued = true;
-                        status.queuePosition = currentQueuePosition;
-                    }
+                }
+
+                if (queued) {
+                    status.queued = true;
+                    status.queuePosition = currentQueuePosition;
                 }
             }
 
@@ -137,13 +138,14 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
     function download(server) {
         if (stop) {
-            return stopDownload();
+            return stopDownloadAndFinish();
         }
 
         console.log('starting download');
         exitPromise = new Promise();
         queued = false;
         downloading = true;
+        serverOffline = false;
         currentServer = server;
 
         var options = {
@@ -225,7 +227,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
     function restartDownload() {
         if (stop) {
-            return stopDownload();
+            return stopDownloadAndFinish();
         }
         console.log('restarting download');
         restart = false;
@@ -241,6 +243,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
     function stopDownload() {
         downloading = false;
+    }
+
+    function stopDownloadAndFinish() {
+        stopDownloadAndFinish();
+        finishToken();
     }
 
     function startDownload() {
