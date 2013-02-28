@@ -22,7 +22,7 @@ function buildargs(options, mandatory) {
 
     var args = [];
 
-    args.push('--rsh=ssh -i"' + options.keyfile + '" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no');
+    args.push('--rsh=ssh -i"' + options.keyfile + '" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -oBatchMode=yes');
     args.push('--recursive');
     args.push('--timeout=120');
     args.push('--copy-links');
