@@ -24,6 +24,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var queued = false;
     var noMatchingServer = false;
     var currentServer = null;
+    var reload = false;
     var restart = false;
     var currentQueuePosition = 0;
     var offlineServers = {};
@@ -146,7 +147,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
         queued = false;
         downloading = true;
         serverOffline = false;
-        currentServer = server;
 
         var options = {
             keyfile: config.keyfile,
@@ -185,11 +185,16 @@ var Download = module.exports = function(dependencies, modelInstance) {
             finishToken();
         });
 
-        rsyncp.on('error', function(code) {
+        rsyncp.on('error', function(code, msg) {
             console.log('got error ' + code);
+            console.log(msg);
             onrsyncpEnd();
-            if (restart === true) {
-                restartDownload();
+            if (reload === true) {
+                reload = false;
+                reloadServerInfoAndDownload(server);
+            } else if (restart === true) {
+                restart = false;
+                restart();
             } else {
                 serverOffline = true;
                 offlineServers[server.id] = new Date();
@@ -202,7 +207,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
     function onrsyncpEnd() {
         stopDownload();
         rsyncp = null;
-        currentServer = null;
         if (exitPromise) {
             exitPromise.resolve();
             exitPromise = null;
@@ -230,7 +234,6 @@ var Download = module.exports = function(dependencies, modelInstance) {
             return stopDownloadAndFinish();
         }
         console.log('restarting download');
-        restart = false;
         if (rsyncp) {
             restart = true;
             return rsyncp.kill();
@@ -248,6 +251,43 @@ var Download = module.exports = function(dependencies, modelInstance) {
     function stopDownloadAndFinish() {
         stopDownloadAndFinish();
         finishToken();
+    }
+
+    function getTokenAndQueue(server) {
+        finishToken();
+        queued = true;
+        currentServer = server;
+
+        token = new Token(function() {
+            download(server);
+        }, modelInstance.id);
+
+        token.on('reject', function() {
+            queued = false;
+            token = null;
+            restartDownload();
+        });
+        token.on('position-change', function(newPosition) {
+            currentQueuePosition = newPosition;
+        });
+        dependencies.serverQueue.queue(server.id, token);
+    }
+
+    function reloadServerInfoAndDownload(server) {
+        reload = false;
+        startupPromise.then(function(models) {
+            models.Server.find({
+                where: { id: server.id }
+            }).success(function(server) {
+                console.log('reload complete ' + server.bwlimit);
+                reload = false;
+                download(server);
+            }).error(function(err) {
+                console.log('reload  failed');
+                stopDownloadAndFinish();
+                startDownload();
+            });
+        });
     }
 
     function startDownload() {
@@ -295,19 +335,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 }
 
                 fse.getServer().success(function(server) {
-                    token = new Token(function() {
-                        download(server);
-                    }, modelInstance.id);
-                    queued = true;
-                    token.on('reject', function() {
-                        queued = false;
-                        token = null;
-                        restartDownload();
-                    });
-                    token.on('position-change', function(newPosition) {
-                        currentQueuePosition = newPosition;
-                    });
-                    dependencies.serverQueue.queue(server.id, token);
+                    getTokenAndQueue(server);
                 }).error(function() {
                     console.log('Server not found');
                     return stopDownload();
@@ -321,7 +349,15 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
     dependencies.eventBus.on('server-change', function(serverId) {
         if (currentServer && currentServer.id === serverId) {
-            restartDownload();
+            console.log('download ' + modelInstance.id + ' server change');
+            if (rsyncp) {
+                console.log('trigger reload');
+                reload = true;
+                rsyncp.kill();
+            } else if (token) {
+                console.log('rejecting token');
+                token.emit('reject');
+            }
         }
     });
 
@@ -329,6 +365,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         if (err) {
             throw err;
         }
+        console.log('download ' + modelInstance.id + ' ready');
         startupPromise.resolve(models);
     });
 

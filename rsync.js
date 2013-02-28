@@ -74,6 +74,7 @@ var download = module.exports.download = function (options) {
         var progressregex = /\s*(\d+)\s+(\d+)%\s+(\d*\.*\d+[a-zA-Z]B\/s)\s*(\d+:\d+:\d+)/;
         var xferregex = /to-check=(\d+)\/(\d+)\)/;
         var self = this;
+        var stderrmsg = '';
 
         rsync.stdout.on('data', function (data) {
             if (progressregex.test(data)) {
@@ -95,13 +96,14 @@ var download = module.exports.download = function (options) {
         });
 
         rsync.stderr.on('data', function (data) {
+            stderrmsg += data;
         });
 
         rsync.on('exit', function (code) {
             if (code === 0) {
                 self.emit('finish');
             } else {
-                self.emit('error', code);
+                self.emit('error', code, stderrmsg);
             }
         });
     } catch (error) {

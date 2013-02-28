@@ -25,8 +25,10 @@ var Queue = module.exports.Queue = function(dependencies) {
         var change = false;
         for (var i = 0; i < l ; i++) {
             if (queue[i].done === true) {
+                console.log('clean queue position ' + i);
                 queue.splice(i, 1);
                 l--;
+                i--;
                 change = true;
             }
         }
@@ -41,18 +43,19 @@ var Queue = module.exports.Queue = function(dependencies) {
         server.running = true;
         var queue = server.queue;
         if (queue.length > 0) {
-            var token = queue[0].token;
+            var item = queue[0];
+            var token = item.token;
             token.on('finished', function() {
                 console.log('queue finished ' + token.id);
                 server.running = false;
-                token.done = true;
+                item.done = true;
                 cleanQueue(queue);
                 schedule(serverId);
             });
             token.on('reject', function() {
                 console.log('queue reject ' + token.id);
                 server.running = false;
-                token.done = true;
+                item.done = true;
                 cleanQueue(queue);
                 schedule(serverId);
             });
@@ -117,10 +120,12 @@ var Queue = module.exports.Queue = function(dependencies) {
         token.on('finished', function() {
             console.log('queue finish ' + token.id);
             item.done = true;
+            cleanQueue(queue);
         });
         token.on('reject', function() {
-            console.log('queue finish ' + token.id);
+            console.log('queue reject ' + token.id);
             item.done = true;
+            cleanQueue(queue);
         });
         schedule(serverId);
         notifyPositionChange(queue);
