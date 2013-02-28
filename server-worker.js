@@ -177,17 +177,15 @@ var Server = function(modelInstance) {
 
                     filelist.forEach(function(fse) {
                         if (!pathmap.hasOwnProperty(fse.path)) {
-                            var entry = models.FSEntry.build(fse);
+                            fse.ServerId = modelInstance.id;
                             var p = new Promise();
                             promises.push(p);
                             change = true;
-                            entry.save().success(function(entry) {
-                                entry.setServer(modelInstance).done(function(err, fse) {
-                                    if (err) {
-                                        return p.reject();
-                                    }
-                                    p.resolve();
-                                });
+                            models.FSEntry.create(fse).done(function(err) {
+                                if (err) {
+                                    return p.reject();
+                                }
+                                p.resolve();
                             });
                         } else {
                             var mod = false;

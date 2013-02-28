@@ -335,13 +335,20 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 }
 
                 fse.getServer().success(function(server) {
+                    if (server === null) {
+                        noMatchingServer = true;
+                        resetDownloadTimer();
+                        return stopDownload();
+                    }
                     getTokenAndQueue(server);
                 }).error(function() {
                     console.log('Server not found');
+                    resetDownloadTimer();
                     return stopDownload();
                 });
             }).error(function() {
                 console.log('path not found');
+                resetDownloadTimer();
                 return stopDownload();
             });
         });

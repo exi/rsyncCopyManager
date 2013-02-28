@@ -137,11 +137,29 @@ var filelist = module.exports.filelist = function (options) {
         rsync = spawn('rsync', args);
         var self = this;
         var filelistregex = /([d\-])[rwx\-]{9}\s+(\d+)\s+\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}\s(.*)/;
+        var filelist = [];
+        var lastline = '';
         var stdoutdata = '';
         var stderrdata = '';
 
         rsync.stdout.on('data', function (data) {
-            stdoutdata += data;
+            var lines = (lastline + '' + data).split('\n');
+            var lastline = lines.pop();
+
+            lines.forEach(function(line) {
+                if (filelistregex.test(line)) {
+                    var m = filelistregex.exec(line);
+                    if (m[3] !== '.') {
+                        var fse = {
+                            isDir: m[1] === 'd',
+                            size: parseInt(m[2], 10),
+                            path: '' + m[3]
+                        };
+                        console.log(fse.path);
+                        filelist.push(fse);
+                    }
+                }
+            });
         });
 
         rsync.stderr.on('data', function (data) {
@@ -150,21 +168,6 @@ var filelist = module.exports.filelist = function (options) {
 
         rsync.on('exit', function (code) {
             if (code === 0) {
-                var filelist = [];
-                var lines = stdoutdata.split('\n');
-
-                lines.forEach(function(line) {
-                    if (filelistregex.test(line)) {
-                        var m = filelistregex.exec(line);
-                        if (m[3] !== '.') {
-                            filelist.push({
-                                isDir: m[1] === 'd',
-                                size: parseInt(m[2], 10),
-                                path: '' + m[3]
-                            });
-                        }
-                    }
-                });
                 self.emit('finish', filelist);
             } else {
                 self.emit('error', code, stderrdata);
