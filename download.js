@@ -194,7 +194,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 reloadServerInfoAndDownload(server);
             } else if (restart === true) {
                 restart = false;
-                restart();
+                restartDownload();
             } else {
                 serverOffline = true;
                 offlineServers[server.id] = new Date();
