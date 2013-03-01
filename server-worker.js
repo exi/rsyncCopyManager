@@ -186,14 +186,12 @@ var Server = function(modelInstance) {
                     matches.forEach(function(fse) {
                         pathmap[fse.path] = fse;
                         ps.complete++;
-                        console.log('' + ps.total + '/' + ps.complete);
                     });
 
                     var promises = [];
                     var change = false;
 
                     filelist.forEach(function(fse) {
-                        console.log('' + ps.total + '/' + ps.complete);
                         if (!pathmap.hasOwnProperty(fse.path)) {
                             fse.ServerId = modelInstance.id;
                             var p = new Promise();

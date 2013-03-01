@@ -26,7 +26,7 @@ function getDownloads(user) {
 function convertDownloadsForView(downloads, user) {
     var ret = [];
     downloads.sort(function sort(a, b) {
-        if (a.UserId === user.id && b.UserId === user.id) {
+        if (a.UserId ===  b.UserId) {
             return a.id - b.id;
         }
         return a.UserId === user.id ? -1 : 1;
@@ -169,7 +169,17 @@ module.exports.apply = function(dependencies, app) {
                     }
 
                     if (status.serverOffline) {
-                        msgs.push('Server offline');
+                        if (status.lastActivity) {
+                            var offset = (Date.now() - status.lastActivity.getTime()) / 1000;
+                            var hours = offset / (60 * 60);
+                            var minutes = '' + Math.floor((hours - Math.floor(hours)) * 60);
+                            minutes = minutes.length == 1 ? '0' + minutes : minutes;
+                            hours = Math.floor(hours);
+
+                            msgs.push('Offline for ' + hours + ':' + minutes);
+                        } else {
+                            msgs.push('Server offline');
+                        }
                     }
 
                     if (status.noMatchingServer) {
