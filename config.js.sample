@@ -3,14 +3,18 @@ module.exports = {
     cookieName: 'rsyncCopyManager',
     port: 3000,
     uid: 'exi',
-    pubkeyfile: '/home/exi/.ssh/id_rsa.pub',
-    keyfile: '/home/exi/.ssh/id_rsa',
+    pubkeyfile: __dirname + '/keys/key.pub',
+    keyfile: __dirname + '/keys/key',
     fs_check_interval: 1,
     download_retry_interval: 1,
     logdir: __dirname + '/logs/',
     downloadDir: __dirname + '/download/',
     defaultUser: 'admin',
     defaultPassword: 'admin',
+    rsync: {
+        maxDepth: 6,
+        compareMode: 'sizeOnly'
+    },
     db: {
         name: 'rsyncCopyManager',
         user: 'root',
