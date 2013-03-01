@@ -5,6 +5,7 @@ var _ = require('lodash');
 var util = require('util');
 var events = require('events');
 var Promise = require('node-promise').Promise;
+var config = require('./config.js');
 
 function escapeSrc(src) {
     return '"' + src + '"';
@@ -22,22 +23,28 @@ function buildargs(options, mandatory) {
 
     var args = [];
 
-    args.push('--rsh=ssh -i"' + options.keyfile + '" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -oBatchMode=yes');
+    args.push('--rsh=ssh -C -i"' + options.keyfile + '" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -oBatchMode=yes');
     args.push('--recursive');
-    args.push('--timeout=120');
     args.push('--copy-links');
+
+    if (config.rsync.maxDepth > 0) {
+        args.push('--exclude="' + Array(config.rsync.maxDepth + 1).join('/*') + '/**"');
+    }
+
     if (options.filelist !== true) {
         args.push('--partial');
         args.push('--progress');
         args.push('--append-verify');
 
-        switch (options.compareMode) {
-            case 'sizeOnly':
-                args.push('--size-only');
-                break;
-            case 'checksum':
-                args.push('--checksum');
-                break;
+        if (config.rsync.compareMode) {
+            switch (config.rsync.compareMode) {
+                case 'sizeOnly':
+                    args.push('--size-only');
+                    break;
+                case 'checksum':
+                    args.push('--checksum');
+                    break;
+            }
         }
     }
 
@@ -155,11 +162,16 @@ var filelist = module.exports.filelist = function (options) {
                             size: parseInt(m[2], 10),
                             path: '' + m[3]
                         };
-                        console.log(fse.path);
                         filelist.push(fse);
                     }
                 }
             });
+            if (filelist.length > 0) {
+                self.emit('progress', {
+                    count: filelist.length,
+                    last: filelist[filelist.length - 1].path
+                });
+            }
         });
 
         rsync.stderr.on('data', function (data) {
@@ -167,7 +179,8 @@ var filelist = module.exports.filelist = function (options) {
         });
 
         rsync.on('exit', function (code) {
-            if (code === 0) {
+            //the code 23 exception skips 'permission denied' errors if the rest of the transfer was successfull
+            if (code === 0 || (code === 23 && filelist.length > 0)) {
                 self.emit('finish', filelist);
             } else {
                 self.emit('error', code, stderrdata);

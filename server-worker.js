@@ -18,6 +18,8 @@ var Server = function(modelInstance) {
     var waitForClose = false;
     var serverOffline;
     var lastErrorOutput = null;
+    var filelistStatus = null;
+    var processingStatus = null;
     var rsyncp;
 
     function resetTimer() {
@@ -80,6 +82,12 @@ var Server = function(modelInstance) {
 
         if (fsCheckInProgress) {
             status.fsCheckInProgress = true;
+            if (filelistStatus !== null) {
+                status.filelistStatus = filelistStatus;
+            }
+            if (processingStatus !== null) {
+                status.processingStatus = processingStatus;
+            }
         }
 
         if (waitForClose) {
@@ -149,9 +157,14 @@ var Server = function(modelInstance) {
             finishedFsCheck();
         });
 
+        rsyncp.on('progress', function(data) {
+            filelistStatus = data;
+        });
+
         rsyncp.on('finish', function(filelist) {
             lastErrorOutput = null;
             serverOffline = false;
+            filelistStatus = null;
             database(function(err, models) {
                 if (err) {
                     console.error(err);
@@ -159,23 +172,28 @@ var Server = function(modelInstance) {
                     return;
                 }
 
-                var paths = [];
-                filelist.forEach(function(fse) {
-                    paths.push(fse.path);
-                });
-
                 modelInstance.getFSEntries().success(function(matches) {
                     var fsentries = matches;
                     var pathmap = {};
 
+                    processingStatus = {
+                        total: matches.length + filelist.length,
+                        complete: 0
+                    };
+
+                    var ps = processingStatus;
+
                     matches.forEach(function(fse) {
                         pathmap[fse.path] = fse;
+                        ps.complete++;
+                        console.log('' + ps.total + '/' + ps.complete);
                     });
 
                     var promises = [];
                     var change = false;
 
                     filelist.forEach(function(fse) {
+                        console.log('' + ps.total + '/' + ps.complete);
                         if (!pathmap.hasOwnProperty(fse.path)) {
                             fse.ServerId = modelInstance.id;
                             var p = new Promise();
@@ -185,6 +203,7 @@ var Server = function(modelInstance) {
                                 if (err) {
                                     return p.reject();
                                 }
+                                ps.complete++;
                                 p.resolve();
                             });
                         } else {
@@ -210,13 +229,15 @@ var Server = function(modelInstance) {
                                         return p.reject();
                                     }
                                     p.resolve();
+                                    ps.complete++;
                                 });
+                            } else {
+                                ps.complete++;
                             }
 
                             delete pathmap[fse.path];
                         }
                     });
-
 
                     for (var m in pathmap) {
                         if (pathmap.hasOwnProperty(m)) {
@@ -235,6 +256,7 @@ var Server = function(modelInstance) {
                         if (change) {
                             process.send({ command: 'event', topic: 'fs-change' });
                         }
+                        processingStatus = null;
                         resetFSCheckTime();
                     }, resetFSCheckTime);
                 });

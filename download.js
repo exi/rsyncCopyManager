@@ -51,15 +51,15 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 } else {
                     if (downloading) {
                         status.active = true;
+                        if (downloadStatus) {
+                            status.downloadStatus = downloadStatus;
+                        }
+
+                        if (fileStatus) {
+                            status.fileStatus = fileStatus;
+                        }
                     }
 
-                    if (downloadStatus) {
-                        status.downloadStatus = downloadStatus;
-                    }
-
-                    if (fileStatus) {
-                        status.fileStatus = fileStatus;
-                    }
 
                 }
 
