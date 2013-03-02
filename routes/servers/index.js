@@ -223,10 +223,6 @@ module.exports.apply = function(dependencies, app) {
                         msgs.push('Scanning filesystem');
                     }
 
-                    if (status.filelistStatus) {
-                        msgs.push(status.filelistStatus.count + ' files scanned(' + status.filelistStatus.last + ')');
-                    }
-
                     if (status.processingStatus) {
                         msgs.push('processing ' + status.processingStatus.complete + '/' + status.processingStatus.total);
                     }

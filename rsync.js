@@ -144,33 +144,33 @@ var filelist = module.exports.filelist = function (options) {
         rsync = spawn('rsync', args);
         var self = this;
         var filelistregex = /([d\-])[rwx\-]{9}\s+(\d+)\s+\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}:\d{2}\s(.*)/;
-        var filelist = [];
         var lastline = '';
         var stdoutdata = '';
         var stderrdata = '';
 
         rsync.stdout.on('data', function (data) {
+            var filelist = [];
             var lines = (lastline + '' + data).split('\n');
             var lastline = lines.pop();
 
             lines.forEach(function(line) {
                 if (filelistregex.test(line)) {
                     var m = filelistregex.exec(line);
-                    if (m[3] !== '.') {
+                    if (m[3] !== '.' && m[3]) {
                         var fse = {
                             isDir: m[1] === 'd',
                             size: parseInt(m[2], 10),
                             path: '' + m[3]
                         };
                         filelist.push(fse);
+                    } else {
+                        console.log('exclude', m[3]);
                     }
                 }
             });
+
             if (filelist.length > 0) {
-                self.emit('progress', {
-                    count: filelist.length,
-                    last: filelist[filelist.length - 1].path
-                });
+                self.emit('files', filelist);
             }
         });
 
@@ -190,12 +190,30 @@ var filelist = module.exports.filelist = function (options) {
         this.emit('error', error);
     }
 
+    this.suspended = false;
+
     this.kill = function() {
         console.log('killing rsync');
         if (rsync && rsync.kill) {
             rsync.kill('SIGINT');
             rsync.kill('SIGTERM');
             rsync.kill('SIGHUP');
+        }
+    };
+
+    this.suspend = function() {
+        if (rsync && rsync.kill) {
+            rsync.kill('SIGSTOP');
+            console.log('##### rsync suspend');
+            this.suspended = true;
+        }
+    };
+
+    this.resume = function() {
+        if (rsync && rsync.kill) {
+            rsync.kill('SIGCONT');
+            this.suspended = false;
+            console.log('##### rsync resume');
         }
     };
 };

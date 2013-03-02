@@ -18,7 +18,6 @@ var Server = function(modelInstance) {
     var waitForClose = false;
     var serverOffline;
     var lastErrorOutput = null;
-    var filelistStatus = null;
     var processingStatus = null;
     var rsyncp;
 
@@ -82,9 +81,6 @@ var Server = function(modelInstance) {
 
         if (fsCheckInProgress) {
             status.fsCheckInProgress = true;
-            if (filelistStatus !== null) {
-                status.filelistStatus = filelistStatus;
-            }
             if (processingStatus !== null) {
                 status.processingStatus = processingStatus;
             }
@@ -139,125 +135,186 @@ var Server = function(modelInstance) {
         if (fsCheckInProgress || stop) {
             return;
         }
-
-        console.log('checking files for server: ' + modelInstance.id);
         startedFsCheck();
 
-        rsyncp = new rsync.filelist({
-            keyfile: config.keyfile,
-            username: modelInstance.username,
-            host: modelInstance.hostname,
-            src: modelInstance.path
-        });
+        database(function(err, models, sequelize) {
+            if (stop) {
+                return finishedFsCheck();
+            }
 
-        rsyncp.on('error', function(code, msg) {
-            console.error(consolePrefix + ' fscheck failed: ' + code);
-            serverOffline = true;
-            lastErrorOutput = msg;
-            finishedFsCheck();
-        });
+            if (err) {
+                console.error(err);
+                finishedFsCheck();
+                return;
+            }
+            console.log('checking files for server: ' + modelInstance.id);
 
-        rsyncp.on('progress', function(data) {
-            filelistStatus = data;
-        });
+            var revision = modelInstance.fse_revision + 1;
+            var promises = [];
+            var change = false;
+            var total = 0;
+            var toFind = [];
+            var packSize = 100;
+            var packChain = new Promise();
+            var chainLength = 0;
+            var minChainLength = 5;
+            var maxChainLength = 10;
+            packChain.resolve();
 
-        rsyncp.on('finish', function(filelist) {
-            lastErrorOutput = null;
-            serverOffline = false;
-            filelistStatus = null;
-            database(function(err, models) {
-                if (err) {
-                    console.error(err);
-                    finishedFsCheck();
-                    return;
+            processingStatus = {
+                total: 0,
+                complete: 0
+            };
+
+            function packFind(path, force) {
+                var p = new Promise();
+                toFind.push({
+                    path: path,
+                    promise: p,
+                    finishPromise: new Promise()
+                });
+                if (toFind.length > packSize || force) {
+                    fetchPack();
                 }
+                return p;
+            }
 
-                modelInstance.getFSEntries().success(function(matches) {
-                    var fsentries = matches;
-                    var pathmap = {};
+            function fetchPack() {
+                var tf = toFind;
+                var newChain = new Promise();
+                packChain.then(function() {
+                    if (tf.length > 0) {
+                        var pmap = {};
+                        var fpromises = [];
+                        var paths = tf.map(function(item, idx) {
+                            pmap[item.path] = idx;
+                            fpromises.push(item.finishPromise);
+                            return item.path;
+                        });
 
-                    processingStatus = {
-                        total: matches.length + filelist.length,
-                        complete: 0
-                    };
-
-                    var ps = processingStatus;
-
-                    matches.forEach(function(fse) {
-                        pathmap[fse.path] = fse;
-                        ps.complete++;
-                    });
-
-                    var promises = [];
-                    var change = false;
-
-                    filelist.forEach(function(fse) {
-                        if (!pathmap.hasOwnProperty(fse.path)) {
-                            fse.ServerId = modelInstance.id;
-                            var p = new Promise();
-                            promises.push(p);
-                            change = true;
-                            models.FSEntry.create(fse).done(function(err) {
-                                if (err) {
-                                    return p.reject();
+                        models.FSEntry.findAll({
+                            where: {
+                                path: paths
+                            }
+                        }).done(function(err, matches) {
+                            if (err) {
+                                return newChain.reject();
+                            }
+                            matches.forEach(function(m) {
+                                if (pmap.hasOwnProperty(m.path)) {
+                                    var idx = pmap[m.path];
+                                    tf[idx].promise.resolve([m, tf[idx].finishPromise]);
+                                    delete pmap[m.path];
                                 }
-                                ps.complete++;
-                                p.resolve();
                             });
-                        } else {
-                            var mod = false;
-                            var ofse = pathmap[fse.path];
-                            if (ofse.size !== fse.size) {
-                                ofse.size = fse.size;
-                                mod = true;
+
+                            for (var i in pmap) {
+                                if (pmap.hasOwnProperty(i)) {
+                                    var idx = pmap[i];
+                                    tf[idx].promise.resolve([null, tf[idx].finishPromise]);
+                                }
                             }
 
-                            if (ofse.isDir !== fse.isDir) {
-                                ofse.isDir = fse.isDir;
-                                mod = true;
-                            }
-
-                            if (mod) {
-                                var p = new Promise();
-                                promises.push(p);
-                                console.log('update ' + fse.path);
-                                change = true;
-                                ofse.save().done(function(err) {
-                                    if (err) {
-                                        return p.reject();
-                                    }
-                                    p.resolve();
-                                    ps.complete++;
-                                });
-                            } else {
-                                ps.complete++;
-                            }
-
-                            delete pathmap[fse.path];
-                        }
-                    });
-
-                    for (var m in pathmap) {
-                        if (pathmap.hasOwnProperty(m)) {
-                            (function(s, path) {
-                                var p = new Promise();
-                                promises.push(p);
-                                change = true;
-                                s.destroy().success(function() {
-                                    p.resolve();
-                                });
-                            })(pathmap[m], pathmap[m].path);
-                        }
+                            All(fpromises).then(function() {
+                                newChain.resolve();
+                            });
+                        });
+                    } else {
+                        newChain.resolve();
                     }
 
-                    All(promises).then(function() {
-                        if (change) {
-                            process.send({ command: 'event', topic: 'fs-change' });
+                    newChain.addBoth(function() {
+                        chainLength--;
+                        if (chainLength < minChainLength && rsyncp.suspended === true) {
+                            rsyncp.resume();
                         }
-                        processingStatus = null;
-                        resetFSCheckTime();
-                    }, resetFSCheckTime);
+                    });
                 });
+                toFind = [];
+                chainLength++;
+                packChai = newChain;
+                return newChain;
+            }
+
+            function insertOrUpdate(fse) {
+                packFind(fse.path).then(function(d) {
+                    var match = d[0];
+                    var p = d[1];
+                    processingStatus.complete++;
+
+                    var handle;
+                    if (match === null) {
+                        fse.ServerId = modelInstance.id;
+                        fse.revision = revision;
+                        handle = models.FSEntry.create(fse);
+                    } else {
+                        match.size = fse.size;
+                        match.revision = revision;
+                        match.isDir = fse.isDir;
+                        handle = match.save(['size', 'revision', 'isDir']);
+                    }
+                    handle.done(function(err) {
+                        if (err) {
+                            return p.reject(err);
+                        }
+                        change = true;
+                        processingStatus.complete++;
+                        p.resolve();
+                    });
+                });
+            }
+
+            rsyncp = new rsync.filelist({
+                keyfile: config.keyfile,
+                username: modelInstance.username,
+                host: modelInstance.hostname,
+                src: modelInstance.path
+            });
+
+            rsyncp.on('error', function(code, msg) {
+                console.error(consolePrefix + ' fscheck failed: ' + code);
+                serverOffline = true;
+                lastErrorOutput = msg;
+                finishedFsCheck();
+            });
+
+            rsyncp.on('files', function(files) {
+                files.forEach(insertOrUpdate);
+                serverOffline = false;
+                lastErrorOutput = null;
+                processingStatus.total += files.length * 2;
+                if (chainLength > maxChainLength && rsyncp.suspended === false) {
+                    rsyncp.suspend();
+                }
+            });
+
+            rsyncp.on('finish', function(filelist) {
+                fetchPack().then(function() {
+                    console.log('fetchpack done');
+                    var p = new Promise();
+                    var oldrevision = modelInstance.fse_revision;
+                    modelInstance.fse_revision = revision;
+                    modelInstance.save().done(function(err) {
+                        if (err) {
+                            return p.reject(err);
+                        }
+                        sequelize.query(
+                            'DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ' AND revision=' + oldrevision + ';'
+                        ).done(function(err) {
+                            if (err) {
+                                return p.reject(err);
+                            }
+                            p.resolve();
+                        });
+                    });
+                    return p;
+                }).then(function() {
+                    if (change) {
+                        process.send({ command: 'event', topic: 'fs-change' });
+                    }
+                    processingStatus = null;
+                    resetFSCheckTime();
+                }, resetFSCheckTime);
             });
         });
 
