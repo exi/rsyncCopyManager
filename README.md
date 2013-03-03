@@ -25,6 +25,10 @@ Installation
 5. start with `node app.js`
 
 Keys
-============
+====
 The keys are standard ssh keys generated with `ssh-keygen -f <file>`.
+
+First Login
+===========
+The username and password for the admin user can be specified in the config.js file as `defaultUser` and `defaultPassword`.
 
