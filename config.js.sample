@@ -11,6 +11,7 @@ module.exports = {
     downloadDir: __dirname + '/download/',
     defaultUser: 'admin',
     defaultPassword: 'admin',
+    pathmapperCacheSize: 10000,
     rsync: {
         maxDepth: 6,
         compareMode: 'sizeOnly'

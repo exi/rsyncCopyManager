@@ -5,6 +5,8 @@ define(['jquery'], function($) {
 
     return {
         apply: function() {
+            var placeholder = null;
+
             $('.filelist-tree').livequery(function() {
                 $(this).fileTree({ root: '/', script: '/filelist/getDir' }, fileClickHandler);
             });

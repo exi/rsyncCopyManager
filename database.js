@@ -1,7 +1,6 @@
 var config = require('./config.js');
 var sequelize = new (require('sequelize'))(config.db.name, config.db.user, config.db.password, {
-    host: config.db.host,
-    logging: false
+    host: config.db.host
 });
 
 var Server = sequelize.import(__dirname + '/activeRecord/Server');
@@ -46,3 +45,4 @@ module.exports = function(cb) {
 };
 
 module.exports.chain = require('sequelize').Utils.QueryChainer;
+module.exports.format = require('sequelize').Utils.format;

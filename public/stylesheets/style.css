@@ -41,10 +41,12 @@
 body {
   padding-top: 40px;
 }
-.loading-screen {
+.loading-screen,
+.jquerFileTree.wait {
   text-align: center;
   height: 200px;
 }
-.loading-screen img {
+.loading-screen img,
+.jquerFileTree.wait img {
   padding-top: 190px;
 }

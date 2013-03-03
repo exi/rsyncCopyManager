@@ -1,10 +1,11 @@
 var database = require('./database.js');
 var Promise = require('node-promise').Promise;
+var config = require('config.js');
 
 var pathmapper = module.exports = function(dependencies) {
-
     var api = {};
-    var startupPromise = new Promise();
+    var cache = [];
+    var cacheSize = 30;
 
     function createFSEntry(stats) {
         return {
@@ -13,7 +14,28 @@ var pathmapper = module.exports = function(dependencies) {
         };
     }
 
-    var pathmap = createFSEntry();
+    function findCache(query) {
+        var ret = null;
+        cache.some(function(item) {
+            if (item.query === query) {
+                ret = item.result;
+                return true;
+            }
+            return false;
+        });
+        return ret;
+    }
+
+    function addToCache(query, result) {
+        if (cache.length >= config.pathmapperCacheSize) {
+            cache.shift();
+        }
+
+        cache.push({
+            query: query,
+            result: result
+        });
+    }
 
     function buildTree(fsentries) {
         var root = createFSEntry();
@@ -62,115 +84,64 @@ var pathmapper = module.exports = function(dependencies) {
         return basemap;
     }
 
-    function calculateSizeRecursive(root) {
-        var size = 0;
-
-        if (root.contents) {
-            for (var i in root.contents) {
-                if (root.contents.hasOwnProperty(i)) {
-                    var s = calculateSizeRecursive(root.contents[i]);
-                    size += s;
-                }
-            }
-        }
-
-
-        if (root.stats) {
-            if (root.stats.isDir !== false) {
-                root.stats.size = size;
-            } else if (root.stats.isDir === false) {
-                size += root.stats.size;
-            }
-        }
-
-        return size;
-    }
-
     api.getDirectoryContent = function(path, searchWords) {
         var p = new Promise();
         searchWords = searchWords || [];
 
-        startupPromise.then(function(models) {
-            if (searchWords.length === 0) {
-                var ret = getContent(pathmap, path);
-                if (ret === null) {
-                    return p.reject('Path not found');
-                }
-                return p.resolve(ret);
-            } else {
-                var where = [];
-                var clauses = [];
-                var replacements = [];
-                searchWords.forEach(function(word) {
-                    clauses.push('path LIKE ?');
-                    replacements.push('%' + word + '%');
-                });
-
-                where = [clauses.join(' AND ')].concat(replacements);
-
-                models.FSEntry.findAll({
-                    where: where
-                }).done(function(err, fsentries) {
-                    if (err) {
-                        return p.reject(err);
-                    }
-
-                    var ret = getContent(buildTree(fsentries), path);
-                    if (ret === null) {
-                        return p.reject('Path not found');
-                    }
-                    p.resolve(ret);
-                });
-            }
-        });
-
-        return p;
-    };
-
-    api.addEntry = function(fse) {
-        pathmap = addEntry(pathmap, fse);
-    };
-
-    api.delEntry = function(path) {
-        var parts = path.split('/');
-        var basemap = pathmap;
-        if (path !== '') {
-            for (var idx = 0; idx < parts.length; idx++) {
-                var part = parts[idx];
-                if (!basemap.contents.hasOwnProperty(part)) {
-                    return;
-                } else if (idx === parts.length - 1) {
-                    delete basemap.contents[part];
-                } else {
-                    basemap = basemap.contents[part];
-                }
-            }
-        }
-    };
-
-    api.reloadAllEntries = function() {
-        var p = new Promise();
-        console.log('pm reload');
-
-        startupPromise.then(function(models) {
-            models.FSEntry.findAll().success(function(fsentries) {
-                pathmap = buildTree(fsentries);
-                calculateSizeRecursive(pathmap);
-                p.resolve();
+        database(function(err, models, sequelize) {
+            var depth = path === '' ? 0 : path.split('/').length;
+            var wheres = [database.format(['path LIKE ?', '' + path + '%'])];
+            searchWords = searchWords || [];
+            searchWords.forEach(function(word) {
+                wheres.push(database.format(['path LIKE ?', '%' + word + '%']));
             });
+            wheres.sort();
+            var where = wheres.length > 0 ? 'WHERE ' + wheres.join(' AND ') : '';
+            var query = 'SELECT SUBSTRING_INDEX(path, \'/\', ' + (depth + 1) + ') AS subpath, ' +
+                '(LENGTH(path) - LENGTH(REPLACE(path, \'/\', \'\'))) as depth, ' +
+                'id FROM `FSEntries` ' +
+                where + ' GROUP BY subpath;';
+            var fromCache = findCache(query);
+            if (fromCache !== null) {
+                p.resolve(fromCache);
+            } else {
+                sequelize.query(query, null, { raw: true }).done(
+                    function(err, data) {
+                        if (err) {
+                            return p.reject(err);
+                        }
+                        var ids = [];
+                        var fses = [];
+                        data.forEach(function(row) {
+                            if (row.depth < (depth + 1)) {
+                                ids.push(row.id);
+                            } else {
+                                fses.push({
+                                    path: row.subpath,
+                                    isDir: true,
+                                    size: 0
+                                });
+                            }
+                        });
+                        models.FSEntry.findAll({
+                            where: {
+                                id: ids
+                            }
+                        }).done(function(err, entries) {
+                            if (err) {
+                                return p.reject(err);
+                            }
+                            var result = getContent(buildTree(fses.concat(entries)), path);
+                            addToCache(query, result);
+                            p.resolve(result);
+                        });
+                    }
+        );
+            }
         });
 
         return p;
     };
-
-    dependencies.eventBus.on('fs-change', api.reloadAllEntries);
-    dependencies.eventBus.on('server-removed', api.reloadAllEntries);
-
-    database(function(err, models) {
-        pathmap = createFSEntry();
-        startupPromise.resolve(models);
-        api.reloadAllEntries();
-    });
 
     return api;
 };

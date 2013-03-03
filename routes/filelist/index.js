@@ -57,8 +57,7 @@ module.exports.apply = function(dependencies, app) {
                             dirs.push({
                                 name: name,
                                 rel: '/' + item.stats.path + '/',
-                                path: item.stats.path,
-                                size: util.convertToHumanReadableSize(item.stats.size)
+                                path: item.stats.path
                             });
                         } else {
                             files.push({
