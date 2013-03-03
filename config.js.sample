@@ -5,8 +5,8 @@ module.exports = {
     uid: 'exi',
     pubkeyfile: __dirname + '/keys/key.pub',
     keyfile: __dirname + '/keys/key',
-    fs_check_interval: 1,
-    download_retry_interval: 1,
+    fs_check_interval: 60 * 24, //24 hours
+    download_retry_interval: 5, //5 minutes
     logdir: __dirname + '/logs/',
     downloadDir: __dirname + '/download/',
     defaultUser: 'admin',
