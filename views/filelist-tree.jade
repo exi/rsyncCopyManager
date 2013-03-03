@@ -1,7 +1,7 @@
 ul.jquerFileTree(style='display: none;')
   each dir in dirs
     li.directory.collapsed
-      a(href='#', rel='#{dir.rel}')= dir.name
+      a.trigger(href='#', rel='#{dir.rel}')= dir.name
       a.filelist-download(data-filelist-path='#{dir.path}', href='#', rel='#{dir.rel}') download
   each file in files
     li.file(class='ext_' + file.ext)

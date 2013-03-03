@@ -61,7 +61,7 @@ define(['jquery'], function(jQuery) {
                                 }
 
                                 function bindTree(t) {
-                                        $(t).find('LI A').bind(o.folderEvent, function() {
+                                        $(t).find('LI A.trigger').bind(o.folderEvent, function() {
                                                 if ( $(this).parent().hasClass('directory')) {
                                                         if ( $(this).parent().hasClass('collapsed')) {
                                                                 // Expand
