@@ -44,7 +44,7 @@ module.exports.apply = function(dependencies, app) {
 
     app.post('/filelist/getDir', function(req, res) {
         if (req.body.dir !== undefined) {
-            var dir = decodeURIComponent(req.body.dir);
+            var dir = unescape(req.body.dir);
             dir = dir.length === 1 ? '' : dir.substring(1, dir.length - 1);
             var words = req.body.searchWords || [];
             dependencies.pathMapper.getDirectoryContent(dir, words).then(function(fse) {

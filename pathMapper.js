@@ -37,6 +37,10 @@ var pathmapper = module.exports = function(dependencies) {
         });
     }
 
+    function clearCache() {
+        cache = [];
+    }
+
     function buildTree(fsentries) {
         var root = createFSEntry();
         fsentries.forEach(function(fse) {
@@ -142,6 +146,9 @@ var pathmapper = module.exports = function(dependencies) {
 
         return p;
     };
+
+    dependencies.eventBus.on('fs-change', clearCache);
+    dependencies.eventBus.on('server-removed', clearCache);
 
     return api;
 };
