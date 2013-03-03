@@ -1,6 +1,6 @@
 var database = require('./database.js');
 var Promise = require('node-promise').Promise;
-var config = require('config.js');
+var config = require('./config.js');
 
 var pathmapper = module.exports = function(dependencies) {
     var api = {};
