@@ -1,6 +1,9 @@
 var database = require('./database.js');
 var Promise = require('node-promise').Promise;
+var configHelper = require('./configHelper.js');
 var config = require('./config.js');
+
+configHelper.define({ key: 'pathmapperCacheSize', defaultValue: 1000 });
 
 var pathmapper = module.exports = function(dependencies) {
     var api = {};

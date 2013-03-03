@@ -1,4 +1,14 @@
+var configHelper = require('./configHelper.js');
 var config = require('./config.js');
+configHelper.defineMultiple(
+    [
+        { key: 'db.name' },
+        { key: 'db.user' },
+        { key: 'db.password' },
+        { key: 'db.host' }
+    ]
+);
+
 var sequelize = new (require('sequelize'))(config.db.name, config.db.user, config.db.password, {
     host: config.db.host
 });

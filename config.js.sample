@@ -7,7 +7,6 @@ module.exports = {
     keyfile: __dirname + '/keys/key',
     fs_check_interval: 60 * 24, //24 hours
     download_retry_interval: 5, //5 minutes
-    logdir: __dirname + '/logs/',
     downloadDir: __dirname + '/download/',
     defaultUser: 'admin',
     defaultPassword: 'admin',

@@ -1,9 +1,12 @@
 var database = require('../../database.js');
 var fs = require('fs');
+var configHelper = require('../../configHelper.js');
 var config = require('../../config.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
 var all = require('node-promise').all;
+
+configHelper.define({ key: 'pubkeyfile', fileMustExist: true });
 
 function getServers(user) {
     var p = new Promise();

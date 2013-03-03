@@ -1,6 +1,5 @@
 var rsync = require('./rsync');
 var database = require('./database.js');
-var config = require('./config.js');
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
 var child_process = require('child_process');

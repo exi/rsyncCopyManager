@@ -6,6 +6,7 @@
 var express = require('express'),
     routes = require('./routes'),
     http = require('http'),
+    configHelper = require('./configHelper.js'),
     config = require('./config.js'),
     database = require('./database.js'),
     serverManager = require('./serverManager.js'),
@@ -14,6 +15,14 @@ var express = require('express'),
     pathMapper = require('./pathMapper.js'),
     lessMiddleware = require('less-middleware'),
     eventEmitter = require('events').EventEmitter;
+
+configHelper.defineMultiple(
+    [
+        { key: 'cookieSecret', defaultValue: 'soosecret' },
+        { key: 'port', defaultValue: 8080 },
+        { key: 'uid', defaultValue: process.getuid() }
+    ]
+);
 
 var app = module.exports = express();
 

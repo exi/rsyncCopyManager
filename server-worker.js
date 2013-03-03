@@ -1,11 +1,17 @@
 var fs = require('fs');
 var rsync = require('./rsync');
 var database = require('./database.js');
+var configHelper = require('./configHelper.js');
 var config = require('./config.js');
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
 
-var logfd = fs.openSync(config.logdir + '/server.log', 'a+');
+configHelper.defineMultiple(
+    [
+        { key: 'keyfile' },
+        { key: 'fs_check_interval', defaultValue: 60 * 24 }
+    ]
+);
 
 var Server = function(modelInstance) {
     console.log('starting server worker ' + modelInstance.hostname + ' ' + modelInstance.path);

@@ -5,7 +5,15 @@ var _ = require('lodash');
 var util = require('util');
 var events = require('events');
 var Promise = require('node-promise').Promise;
+var configHelper = require('./configHelper.js');
 var config = require('./config.js');
+
+configHelper.defineMultiple(
+    [
+        { key: 'rsync.compareMode', defaultValue: 'sizeOnly' },
+        { key: 'rsync.maxDepth', defaultValue: -1 }
+    ]
+);
 
 function escapeSrc(src) {
     return '"' + src + '"';

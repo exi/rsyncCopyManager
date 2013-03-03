@@ -2,12 +2,21 @@ var database = require('./database.js');
 var rsync = require('./rsync');
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
+var configHelper = require('./configHelper.js');
 var config = require('./config.js');
 var fs = require('fs');
 var wrench = require('wrench');
 var events = require('events');
 var util = require('util');
 var Token = require('./serverQueue.js').Token;
+
+configHelper.defineMultiple(
+    [
+        { key: 'downloadDir', dirMustExist: true, defaultValue: __dirname + '/download' },
+        { key: 'keyfile', fileMustExist: true },
+        { key: 'download_retry_interval', defaultValue: 5 }
+    ]
+);
 
 var Download = module.exports = function(dependencies, modelInstance) {
     var api = {};

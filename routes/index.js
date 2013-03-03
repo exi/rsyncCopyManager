@@ -7,7 +7,15 @@ var downloads = require('./downloads');
 var settings = require('./settings');
 var database = require('../database.js');
 var util = require('./util.js');
+var configHelper = require('../configHelper.js');
 var config = require('../config.js');
+
+configHelper.defineMultiple(
+    [
+        { key: 'defaultUser', defaultValue: 'admin' },
+        { key: 'defaultPassword', defaultValue: 'admin' }
+    ]
+);
 
 module.exports.apply = function(dependencies, app) {
     app.all('/login', function(req, res) {

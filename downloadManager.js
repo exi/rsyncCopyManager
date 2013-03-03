@@ -2,8 +2,11 @@ var database = require('./database.js');
 var Download = require('./download.js');
 var Promise = require('node-promise').Promise;
 var rsync = require('./rsync.js');
+var configHelper = require('./configHelper.js');
 var config = require('./config.js');
 var exec = require('child_process').exec;
+
+configHelper.define({ key: 'downloadDir', dirMustExist: true, defaultValue: __dirname + '/download' });
 
 var DownloadManager = module.exports = function(dependencies) {
     var downloads = {};
