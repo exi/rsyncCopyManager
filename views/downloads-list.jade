@@ -15,11 +15,14 @@ if (downloads.length > 0)
         tr.download-status(data-download-id='#{download.id}')
           td= download.path
           td
-            .input-prepend
-              span.add-on Category:
-              select.span2.download-category(name='category', data-download-id='#{download.id}')
-                each category in categories
-                  option(value='#{category.id}', selected=(download.categoryId == category.id ? 'selected' : null))= category.name
+            if (download.owns === true && download.canEditCategory)
+              .input-prepend
+                span.add-on Category:
+                select.span2.download-category(name='category', data-download-id='#{download.id}')
+                  each category in categories
+                    option(value='#{category.id}', selected=(download.categoryId == category.id ? 'selected' : null))= category.name
+            else
+              span=download.category
           td.download-status-transferred
           td
             .progress.progress-striped.download-status-progress(class=download.active === true ? 'active' : '')

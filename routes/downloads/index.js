@@ -68,8 +68,12 @@ function getDownloadsAndCategories(user) {
     return p;
 }
 
-function convertDownloadsForView(downloads, user) {
+function convertDownloadsForView(downloads, categories, user) {
     var ret = [];
+    var cmap = {};
+    categories.forEach(function(c) {
+        cmap[c.id] = c.name;
+    });
 
     downloads.sort(function sort(a, b) {
         if (a.UserId ===  b.UserId) {
@@ -79,11 +83,15 @@ function convertDownloadsForView(downloads, user) {
     });
 
     downloads.forEach(function(download) {
+        var cid = download.CategoryId;
+        var cname = cmap.hasOwnProperty(cid) ? cmap[cid] : cmap[1];
         ret.push({
             id: download.id,
             path: download.path,
+            category: cname,
             categoryId: download.CategoryId,
-            owns: user.isAdmin || download.UserId === user.id ? true : false
+            owns: user.isAdmin || download.UserId === user.id ? true : false,
+            canEditCategory: download.complete !== true 
         });
     });
 
@@ -133,7 +141,7 @@ function sendDownloadList(res, user) {
         res.render(
             'downloads-list',
             {
-                downloads: convertDownloadsForView(data.downloads, user),
+                downloads: convertDownloadsForView(data.downloads, data.categories, user),
                 categories: data.categories
             },
             function(err, content) {
@@ -154,7 +162,7 @@ module.exports.apply = function(dependencies, app) {
             res.render(
                 'downloads',
                 {
-                    downloads: convertDownloadsForView(data.downloads, req.session.user),
+                    downloads: convertDownloadsForView(data.downloads, data.categories, req.session.user),
                     categories: data.categories
                 },
                 function(err, content) {
@@ -346,6 +354,9 @@ module.exports.apply = function(dependencies, app) {
                     return efun('Category not found!');
                 }
                 getDownloadWithId(req, id).then(function(download) {
+                    if (download.complete) {
+                        return efun('Can\'t change Category of finished downloads!');
+                    }
                     download.CategoryId = categoryId;
                     download.save(['CategoryId']).success(function() {
                         util.sendSuccess(res);
