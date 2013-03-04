@@ -10,6 +10,11 @@ module.exports.sendError = function(res, msg) {
         }
     );
 };
+module.exports.wrapErrorFunction = function(res) {
+    return function(err) {
+        module.exports.sendError(res, err);
+    };
+};
 
 module.exports.sendSuccessBox = function(res, msg) {
     msg = msg || 'Success.';

@@ -1,4 +1,4 @@
-define(['jquery'], function($) {
+define(['jquery', 'helper'], function($, helper) {
     return {
         apply: function() {
             $('.download-status-list').livequery(function() {
@@ -48,19 +48,13 @@ define(['jquery'], function($) {
                 clearTimeout(this.refreshTimer);
             });
 
-            $('.download-delete').livequery('click', function() {
-                var id = $(this).attr('data-download-id');
-                var this_ = this;
-                $.ajax({
-                    url: '/downloads/del',
-                    data: { id: id },
-                    type: 'POST'
-                }).always(function(data) {
-                    if (data && data.content) {
-                        $('#downloadsModal').html(data.content);
-                        $('#downloadsModal').modal('show');
-                    }
-                });
+
+            helper.addClickListener('.download-delete', '/downloads/del', {
+                idAttr: 'data-download-id',
+                replaceQuery: '#downloadsModal',
+                onSuccess: function() {
+                    $('#downloadsModal').modal('show');
+                }
             });
 
             $('.download-delete-confirm').livequery(function() {
@@ -89,6 +83,16 @@ define(['jquery'], function($) {
             }, function() {
                 $(this).find('.download-delete-confirm-button').unbind('click');
                 $(this).find('.download-delete-data').unbind('click');
+            });
+
+            $('.download-category').livequery('change', function(evt) {
+                var id = $(this).attr('data-download-id');
+                var val = $(this).val();
+                $.ajax({
+                    url: '/downloads/changeCategory',
+                    data: { id: id, categoryId: val },
+                    type: 'POST'
+                });
             });
         }
     };

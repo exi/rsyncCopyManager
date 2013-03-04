@@ -1,4 +1,5 @@
-var fs = require('fs');
+var fsHelper = require('./fsHelper.js');
+
 var config;
 try {
     config = require('./config.js');
@@ -49,24 +50,11 @@ module.exports.define = function(definition) {
     }
 
     if (fileMustExist || dirMustExist) {
-        var stat;
-        try {
-            stat = fs.statSync(value);
-        } catch (err) {
-            if (fileMustExist) {
-                fileStatFail();
-            } else if (dirMustExist) {
-                dirStatFail();
-            } else {
-                throw err;
-            }
-        }
-
-        if (fileMustExist && !stat.isFile()) {
+        if (fileMustExist && !fsHelper.isFileAndExist(value)) {
             fileStatFail();
         }
 
-        if (dirMustExist && !stat.isDirectory()) {
+        if (dirMustExist && !fsHelper.isDirAndExist(value)) {
             dirStatFail();
         }
     }

@@ -2,25 +2,50 @@ var util = require('../util.js');
 var database = require('../../database.js');
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
+var fsHelper = require('../../fsHelper.js');
 
-function sendUserList(res, models) {
-    models.User.all().success(function(users) {
+function sendList(res, model, template, key) {
+    var efun = util.wrapErrorFunction(res);
+    model.all().success(function(data) {
+        var d = {};
+        d[key] = data;
         res.render(
-            'settings-userlist',
-            {
-                users: users
-            },
+            template,
+            d,
             function(err, content) {
                 if (err) {
-                    return util.sendError(res, err);
+                    return efun(err);
                 }
 
                 util.sendSuccess(res, content);
             }
         );
-    }).error(function(err) {
-        util.sendError(res, err);
-    });
+    }).error(efun);
+}
+
+function sendUserList(res, models) {
+    sendList(res, models.User, 'settings-userlist', 'users');
+}
+
+function sendCategoryList(res, models) {
+    sendList(res, models.Category, 'settings-categorylist', 'categories');
+}
+
+function deleteCategory(category) {
+    var p = new Promise();
+    function reject(err) {
+        p.reject(err);
+    }
+
+    database.query(
+        database.format(['UPDATE Downloads SET CategoryId = 1 WHERE CategoryId = ?;', category.id])
+    ).success(function() {
+        category.destroy().success(function() {
+            p.resolve();
+        }).error(reject);
+    }).error(reject);
+
+    return p;
 }
 
 module.exports.apply = function(dependencies, app) {
@@ -73,29 +98,31 @@ module.exports.apply = function(dependencies, app) {
     }
 
     app.post('/settings', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
         database(function(err, models) {
             if (err) {
-                return util.sendError(res, 'Database error.');
+                return efun('Database error.');
             }
 
             if (req.session.user.isAdmin) {
                 models.User.all().success(function(users) {
-                    res.render(
-                        'settings-admin',
-                        {
-                            user: req.session.user,
-                            users: users
-                        },
-                        function(err, content) {
-                            if (err) {
-                                return util.sendError(res, err);
+                    models.Category.all().success(function(categories) {
+                        res.render(
+                            'settings-admin',
+                            {
+                                user: req.session.user,
+                                users: users,
+                                categories: categories
+                            },
+                            function(err, content) {
+                                if (err) {
+                                    return efun(err);
+                                }
+                                util.sendSuccess(res, content);
                             }
-                            util.sendSuccess(res, content);
-                        }
-                    );
-                }).error(function(err) {
-                    util.sendError(res, err);
-                });
+                        );
+                    }).error(efun);
+                }).error(efun);
             } else {
                 res.render(
                     'settings',
@@ -104,7 +131,7 @@ module.exports.apply = function(dependencies, app) {
                     },
                     function(err, content) {
                         if (err) {
-                            return util.sendError(res, err);
+                            return efun(err);
                         }
                         util.sendSuccess(res, content);
                     }
@@ -114,20 +141,18 @@ module.exports.apply = function(dependencies, app) {
     });
 
     app.post('/settings/setAdmin', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
         if (!req.body || req.body.id === undefined || req.body.id === null) {
-            return util.sendError(res, 'Invalid request.');
+            return efun('Invalid request.');
         }
 
         var id = parseInt(req.body.id, 10);
-        console.log(req.body.isAdmin);
         var admin = req.body.isAdmin === 'true';
-        console.log('admin:');
-        console.log(admin);
 
         if (req.session.user.isAdmin) {
             database(function(err, models) {
                 if (err) {
-                    return util.sendError(res, 'Database error.');
+                    return efun('Database error.');
                 }
 
                 models.User.find({
@@ -138,21 +163,18 @@ module.exports.apply = function(dependencies, app) {
                     user.isAdmin = admin;
                     user.save(['isAdmin']).success(function() {
                         util.sendSuccess(res);
-                    }).error(function(err) {
-                        util.sendError(res, err);
-                    });
-                }).error(function(err) {
-                    util.sendError(res, err);
-                });
+                    }).error(efun);
+                }).error(efun);
             });
         } else {
-            return util.sendError(res, 'Forbidden.');
+            return efun('Forbidden.');
         }
     });
 
     app.post('/settings/changePassword', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
         if (!req.body || req.body.id === undefined || req.body.id === null) {
-            return util.sendError(res, 'Invalid request.');
+            return efun('Invalid request.');
         }
 
         var password = req.body.password;
@@ -160,17 +182,17 @@ module.exports.apply = function(dependencies, app) {
         var id = parseInt(req.body.id, 10);
 
         if (password === '') {
-            return util.sendError(res, 'Password must not be empty!');
+            return efun('Password must not be empty!');
         }
 
         if (password !== passwordRepeat) {
-            return util.sendError(res, 'Passwords do not match.');
+            return efun('Passwords do not match.');
         }
 
         if (req.session.user.isAdmin || req.session.user.id === id) {
             database(function(err, models) {
                 if (err) {
-                    return util.sendError(res, 'Database error.');
+                    return efun('Database error.');
                 }
 
                 models.User.find({
@@ -181,47 +203,44 @@ module.exports.apply = function(dependencies, app) {
                     user.password = util.hash(password);
                     user.save(['password']).success(function() {
                         util.sendSuccessBox(res, 'Password changed.');
-                    }).error(function(err) {
-                        util.sendError(res, err);
-                    });
-                }).error(function(err) {
-                    util.sendError(res, err);
-                });
+                    }).error(efun);
+                }).error(efun);
             });
         } else {
-            return util.sendError(res, 'Forbidden.');
+            return efun('Forbidden.');
         }
     });
 
     app.post('/settings/addUser', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
         if (!req.body) {
-            return util.sendError(res, 'Invalid request.');
+            return efun('Invalid request.');
         }
 
         if (!req.session.user.isAdmin) {
-            return util.sendError(res, 'Forbidden.');
+            return efun('Forbidden.');
         }
 
-        var password = req.body.password;
-        var passwordRepeat = req.body.passwordRepeat;
-        var username = req.body.username;
+        var password = req.body.password || '';
+        var passwordRepeat = req.body.passwordRepeat || '';
+        var username = req.body.username || '';
         var isAdmin = req.body.isAdmin;
 
         if (password === '') {
-            return util.sendError(res, 'Password must not be empty!');
+            return efun('Password must not be empty!');
         }
 
         if (username === '') {
-            return util.sendError(res, 'Username must not be empty!');
+            return efun('Username must not be empty!');
         }
 
         if (password !== passwordRepeat) {
-            return util.sendError(res, 'Passwords do not match.');
+            return efun('Passwords do not match.');
         }
 
         database(function(err, models) {
             if (err) {
-                return util.sendError(res, 'Database error.');
+                return efun('Database error.');
             }
 
             models.User.create({
@@ -230,15 +249,14 @@ module.exports.apply = function(dependencies, app) {
                 isAdmin: !!isAdmin
             }).success(function() {
                 sendUserList(res, models);
-            }).error(function(err) {
-                util.sendError(res, err);
-            });
+            }).error(efun);
         });
     });
 
     app.post('/settings/delUser', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
         if (!req.body || req.body.id === undefined || req.body.id === null) {
-            return util.sendError(res, 'Invalid request.');
+            return efun('Invalid request.');
         }
 
         var id = parseInt(req.body.id, 10);
@@ -246,7 +264,7 @@ module.exports.apply = function(dependencies, app) {
         if (req.session.user.isAdmin) {
             database(function(err, models) {
                 if (err) {
-                    return util.sendError(res, 'Database error.');
+                    return efun('Database error.');
                 }
 
                 models.User.find({
@@ -255,20 +273,138 @@ module.exports.apply = function(dependencies, app) {
                     }
                 }).success(function(user) {
                     if (user === null) {
-                        util.sendError(res, 'User not found');
+                        efun('User not found');
                     }
 
                     deleteUser(user, models).then(function() {
                         sendUserList(res, models);
-                    }, function(err) {
-                        sendError(res, err);
-                    });
-                }).error(function(err) {
-                    util.sendError(res, err);
-                });
+                    }, efun);
+                }).error(efun);
             });
         } else {
-            return util.sendError(res, 'Forbidden.');
+            return efun('Forbidden.');
+        }
+    });
+
+    app.post('/settings/addCategory', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
+        if (!req.body) {
+            return efun('Invalid request.');
+        }
+
+        if (!req.session.user.isAdmin) {
+            return efun('Forbidden.');
+        }
+
+        var name = req.body.name || '';
+        var destination = req.body.destination || '';
+
+        if (name === '') {
+            return efun('Name must not be empty!');
+        }
+
+        if (destination === '') {
+            return efun('Destination must not be empty!');
+        }
+
+        if (!fsHelper.isDirAndExist(destination)) {
+            return efun('Destination is not a Directory!');
+        }
+
+        database(function(err, models) {
+            if (err) {
+                return efun('Database error.');
+            }
+
+            models.Category.create({
+                name: name,
+                destination: destination
+            }).success(function() {
+                sendCategoryList(res, models);
+            }).error(efun);
+        });
+    });
+
+    app.post('/settings/changeCategory', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
+        if (!req.body || !req.body.hasOwnProperty('id') || !req.body.id) {
+            return efun('Invalid request.');
+        }
+
+        if (!req.session.user.isAdmin) {
+            return efun('Forbidden.');
+        }
+
+        var id = parseInt(req.body.id, 10);
+        var name = req.body.name || '';
+        var destination = req.body.destination || '';
+
+        if (name === '' && destination === '') {
+            return efun('Name or destination must be set!');
+        }
+
+        if (destination !== '' && !fsHelper.isDirAndExist(destination)) {
+            return efun('Destination is not a Directory!');
+        }
+
+        database(function(err, models) {
+            if (err) {
+                return efun('Database error.');
+            }
+
+            models.Category.find(id).success(function(cat) {
+                if (cat === null) {
+                    return efun('Category not found!');
+                }
+
+                var handle;
+                var changes = [];
+                if (name !== '') {
+                    cat.name = name;
+                    changes.push('name');
+                }
+                if (destination !== '') {
+                    cat.destination = destination;
+                    changes.push('destination');
+                }
+
+                cat.save(changes).success(function() {
+                    util.sendSuccess(res);
+                }).error(efun);
+            }).error(efun);
+        });
+    });
+
+    app.post('/settings/delCategory', function(req, res) {
+        var efun = util.wrapErrorFunction(res);
+        if (!req.body || !req.body.id) {
+            return efun('Invalid request.');
+        }
+
+        var id = parseInt(req.body.id, 10);
+
+        if (id === 1) {
+            return efun('Cannot delete default Category!');
+        }
+
+        if (req.session.user.isAdmin) {
+            database(function(err, models) {
+                if (err) {
+                    return efun('Database error.');
+                }
+
+                models.Category.find(id).success(function(cat) {
+                    if (cat === null) {
+                        efun('Category not found');
+                    }
+
+                    deleteCategory(cat).then(function() {
+                        sendCategoryList(res, models);
+                    }, efun);
+                }).error(efun);
+            });
+        } else {
+            return efun('Forbidden.');
         }
     });
 

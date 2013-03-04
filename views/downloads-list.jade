@@ -3,6 +3,7 @@ if (downloads.length > 0)
     thead
       tr
         th Path
+        th Category
         th Transferred
         th Progress
         th Rate
@@ -13,6 +14,12 @@ if (downloads.length > 0)
       each download in downloads
         tr.download-status(data-download-id='#{download.id}')
           td= download.path
+          td
+            .input-prepend
+              span.add-on Category:
+              select.span2.download-category(name='category', data-download-id='#{download.id}')
+                each category in categories
+                  option(value='#{category.id}', selected=(download.categoryId == category.id ? 'selected' : null))= category.name
           td.download-status-transferred
           td
             .progress.progress-striped.download-status-progress(class=download.active === true ? 'active' : '')
@@ -21,7 +28,7 @@ if (downloads.length > 0)
           td.download-status-eta
           td.download-status-text
           td
-            if (download.canDelete === true)
+            if (download.owns === true)
               button.btn.btn-danger.download-delete(type='button', data-loading-text='Deleting...', data-download-id='#{download.id}') Delete
 
 else

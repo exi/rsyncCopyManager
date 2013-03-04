@@ -32,6 +32,8 @@ var DownloadManager = module.exports = function(dependencies) {
                 delete downloads[downloadId];
                 console.log('download removed');
                 p.resolve();
+            }, function(err) {
+                p.reject(err);
             });
         } else {
             p.resolve();

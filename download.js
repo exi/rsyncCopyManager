@@ -1,7 +1,8 @@
 var database = require('./database.js');
 var rsync = require('./rsync');
 var Promise = require('node-promise').Promise;
-var All = require('node-promise').all;
+var all = require('node-promise').all;
+var when = require('node-promise').when;
 var configHelper = require('./configHelper.js');
 var config = require('./config.js');
 var fs = require('fs');
@@ -9,6 +10,7 @@ var wrench = require('wrench');
 var events = require('events');
 var util = require('util');
 var Token = require('./serverQueue.js').Token;
+var mv = require('mv');
 
 configHelper.defineMultiple(
     [
@@ -28,6 +30,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var rsyncp;
     var stop = false;
     var exitPromise;
+    var movePromise;
     var downloadTimer;
     var token = null;
     var queued = false;
@@ -38,6 +41,8 @@ var Download = module.exports = function(dependencies, modelInstance) {
     var currentQueuePosition = 0;
     var offlineServers = {};
     var lastActivity = null;
+    var movingFiles = false;
+    var moveError = false;
 
     api.getStatus = function() {
         var p = new Promise();
@@ -69,7 +74,13 @@ var Download = module.exports = function(dependencies, modelInstance) {
                         }
                     }
 
+                    if (movingFiles) {
+                        status.movingFiles = movingFiles;
+                    }
 
+                    if (moveError) {
+                        status.moveError = moveError;
+                    }
                 }
 
                 if (queued) {
@@ -86,21 +97,22 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
     api.closeAndDelete = function(deleteData) {
         stop = true;
-
         var p = new Promise();
+
+        function efun(err) {
+            console.log(err);
+            p.reject(err);
+        }
         var deletePromise = new Promise();
 
         api.close().then(function() {
-            deletePromise.resolve();
-        });
-
-        var path = modelInstance.path;
-        modelInstance.destroy().success(function() {
-            deletePromise.then(function() {
+            if (!deleteData) {
+                deletePromise.resolve();
+            } else {
                 var parts = path.split('/');
-                var completepath = config.downloadDir + '/' + parts.pop();
-
-                if (deleteData) {
+                var basePath = modelInstance.complete ? findCategoryDir() : config.downloadDir;
+                when(basePath, function(path) {
+                    var completepath = path + '/' + parts.pop();
                     try {
                         var stat = fs.statSync(completepath);
 
@@ -109,14 +121,25 @@ var Download = module.exports = function(dependencies, modelInstance) {
                         } else if (stat.isFile()) {
                             fs.unlink(completepath);
                         }
-                    } catch (e) {
-                        console.log(e);
-                    }
-                }
 
-                p.resolve();
-            });
+                        deletePromise.resolve();
+                    } catch (err) {
+                        console.log(err);
+                        if (err.code === 'ENOENT') {
+                            return deletePromise.resolve();
+                        }
+                        deletePromise.reject(err);
+                    }
+                }, efun);
+            }
         });
+
+        var path = modelInstance.path;
+        deletePromise.then(function() {
+            modelInstance.destroy().success(function() {
+                p.resolve();
+            }).error(efun);
+        }, efun);
 
         return p;
     };
@@ -132,6 +155,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 p.resolve();
             });
             rsyncp.kill();
+        } else if (movePromise) {
+            console.log('waiting for file Move');
+            movePromise.then(function() {
+                p.resolve();
+            });
         } else {
             finishToken();
             p.resolve();
@@ -178,7 +206,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
             serverOffline = false;
             downloadStatus = data;
             modelInstance.progress = data.progress;
-            modelInstance.save();
+            modelInstance.save(['progress']);
             updateLastSeen(server);
         });
 
@@ -187,11 +215,10 @@ var Download = module.exports = function(dependencies, modelInstance) {
         });
 
         rsyncp.on('finish', function() {
-            modelInstance.complete = true;
-            modelInstance.save();
             onrsyncpEnd();
             updateLastSeen(server);
             finishToken();
+            moveFilesAndComplete();
         });
 
         rsyncp.on('error', function(code, msg) {
@@ -361,6 +388,64 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 return stopDownload();
             });
         });
+    }
+
+    function completeDownload() {
+        var p = new Promise();
+
+        modelInstance.complete = true;
+        modelInstance.save(['complete']).success(function() {
+            p.resolve();
+        }).error(function(err) {
+            p.reject();
+        });
+
+        return p;
+    }
+
+    function moveFilesAndComplete() {
+        movePromise = new Promise();
+
+        function moveErr(err) {
+            moveError = true;
+            movingFiles = false;
+            movePromise.resolve();
+
+        }
+
+        findCategoryDir().then(function(dir) {
+            var parts = modelInstance.path.split('/');
+            var name = parts.pop();
+            var src = config.downloadDir + '/' + name;
+            var dst = dir + '/' + name;
+            mv(src, dst, function(err) {
+                if (err) {
+                    return moveErr(err);
+                }
+                completeDownload().then(function() {
+                    movingFiles = false;
+                    movePromise.resolve();
+                }, moveErr);
+            });
+        }, moveErr);
+    }
+
+    function findCategoryDir() {
+        var p = new Promise();
+        database(function(err, models) {
+            if (err) {
+                return p.reject(err);
+            }
+            models.Category.find(modelInstance.CategoryId).success(function(cat) {
+                if (cat === null) {
+                    return p.resolve(config.downloadDir);
+                }
+                p.resolve(cat.destination);
+            }).error(function(err) {
+                p.reject(err);
+            });
+        });
+        return p;
     }
 
     dependencies.eventBus.on('server-change', function(serverId) {

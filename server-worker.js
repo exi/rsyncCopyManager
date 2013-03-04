@@ -49,11 +49,9 @@ var Server = function(modelInstance) {
         var p = new Promise();
 
         api.close().then(function() {
-            database(function(err, models, sequelize) {
-                sequelize.query('DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ';').done(function() {
-                    modelInstance.destroy().done(function() {
-                        p.resolve();
-                    });
+            database.query('DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ';').done(function() {
+                modelInstance.destroy().done(function() {
+                    p.resolve();
                 });
             });
         });
@@ -122,9 +120,11 @@ var Server = function(modelInstance) {
     }
 
     function finishedFsCheck() {
-        fsCheckInProgress = false;
-        checkFileListPromise.resolve();
-        checkFileListPromise = null;
+        if (fsCheckInProgress) {
+            fsCheckInProgress = false;
+            checkFileListPromise.resolve();
+            checkFileListPromise = null;
+        }
     }
 
     function resetFSCheckTime() {
@@ -143,7 +143,7 @@ var Server = function(modelInstance) {
         }
         startedFsCheck();
 
-        database(function(err, models, sequelize) {
+        database(function(err, models) {
             if (stop) {
                 return finishedFsCheck();
             }
@@ -189,6 +189,10 @@ var Server = function(modelInstance) {
                 var tf = toFind;
                 var newChain = new Promise();
                 packChain.then(function() {
+                    if (stop) {
+                        return finishedFsCheck();
+                    }
+
                     if (tf.length > 0) {
                         var pmap = {};
                         var fpromises = [];
@@ -203,6 +207,9 @@ var Server = function(modelInstance) {
                                 path: paths
                             }
                         }).done(function(err, matches) {
+                            if (stop) {
+                                return finishedFsCheck();
+                            }
                             if (err) {
                                 return newChain.reject();
                             }
@@ -230,6 +237,9 @@ var Server = function(modelInstance) {
                     }
 
                     newChain.addBoth(function() {
+                        if (stop) {
+                            return finishedFsCheck();
+                        }
                         chainLength--;
                         if (chainLength < minChainLength && rsyncp.suspended === true) {
                             rsyncp.resume();
@@ -238,12 +248,15 @@ var Server = function(modelInstance) {
                 });
                 toFind = [];
                 chainLength++;
-                packChai = newChain;
+                packChain = newChain;
                 return newChain;
             }
 
             function insertOrUpdate(fse) {
                 packFind(fse.path).then(function(d) {
+                    if (stop) {
+                        return finishedFsCheck();
+                    }
                     var match = d[0];
                     var p = d[1];
                     processingStatus.complete++;
@@ -260,6 +273,9 @@ var Server = function(modelInstance) {
                         handle = match.save(['size', 'revision', 'isDir']);
                     }
                     handle.done(function(err) {
+                        if (stop) {
+                            return finishedFsCheck();
+                        }
                         if (err) {
                             return p.reject(err);
                         }
@@ -285,6 +301,9 @@ var Server = function(modelInstance) {
             });
 
             rsyncp.on('files', function(files) {
+                if (stop) {
+                    return finishedFsCheck();
+                }
                 files.forEach(insertOrUpdate);
                 serverOffline = false;
                 lastErrorOutput = null;
@@ -304,7 +323,7 @@ var Server = function(modelInstance) {
                         if (err) {
                             return p.reject(err);
                         }
-                        sequelize.query(
+                        database.query(
                             'DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ' AND revision=' + oldrevision + ';'
                         ).done(function(err) {
                             if (err) {

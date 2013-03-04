@@ -13,25 +13,28 @@ var sequelize = new (require('sequelize'))(config.db.name, config.db.user, confi
     host: config.db.host
 });
 
-var Server = sequelize.import(__dirname + '/activeRecord/Server');
-var User = sequelize.import(__dirname + '/activeRecord/User');
 var Download = sequelize.import(__dirname + '/activeRecord/Download');
 var FSEntry = sequelize.import(__dirname + '/activeRecord/FSEntry');
+var Server = sequelize.import(__dirname + '/activeRecord/Server');
+var Category = sequelize.import(__dirname + '/activeRecord/Category');
+var User = sequelize.import(__dirname + '/activeRecord/User');
 
-User.hasMany(Server, { as: 'Servers' });
-User.hasMany(Download, { as: 'Downloads' });
+Download.belongsTo(User);
+Download.belongsTo(Category);
+FSEntry.belongsTo(Server);
 Server.hasMany(FSEntry, { as: 'FSEntries' });
 Server.belongsTo(User);
-FSEntry.belongsTo(Server);
-Download.belongsTo(User);
+User.hasMany(Server, { as: 'Servers' });
+User.hasMany(Download, { as: 'Downloads' });
 
 var synced = false;
 var syncing = false;
 var models = {
-    Server: Server,
-    User: User,
+    Download: Download,
     FSEntry: FSEntry,
-    Download: Download
+    Server: Server,
+    Category: Category,
+    User: User
 };
 var cbs = [];
 
@@ -56,3 +59,6 @@ module.exports = function(cb) {
 
 module.exports.chain = require('sequelize').Utils.QueryChainer;
 module.exports.format = require('sequelize').Utils.format;
+module.exports.query = function() {
+    return sequelize.query.apply(sequelize, arguments);
+};

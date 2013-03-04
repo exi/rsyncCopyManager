@@ -1,4 +1,4 @@
-define(['jquery'], function($) {
+define(['jquery', 'helper'], function($, helper) {
     function fileClickHandler(file) {
         return false;
     }
@@ -11,31 +11,23 @@ define(['jquery'], function($) {
                 $(this).fileTree({ root: '/', script: '/filelist/getDir' }, fileClickHandler);
             });
 
-            $('.filelist-download').livequery('click', function() {
-                var path = $(this).attr('data-filelist-path');
-                var this_ = this;
-                $.ajax({
-                    url: '/filelist/download',
-                    data: { path: path },
-                    type: 'POST'
-                }).always(function(data) {
-                    if (data && data.content) {
-                        $('#filelistModal').html(data.content);
-                        $('#filelistModal').modal('show');
-                    }
-                });
-
-                return false;
+            helper.addClickListener('.filelist-download', '/filelist/download', {
+                dataProcessor: function(data, el) {
+                    data.path = $(el).attr('data-filelist-path');
+                    return data;
+                },
+                replaceQuery: '#filelistModal',
+                onSuccess: function() {
+                    $('#filelistModal').modal('show');
+                }
             });
 
-            $('.filelist-download-confirm').livequery('click', function() {
-                var path = $(this).attr('data-filelist-path');
-                var this_ = this;
-                $.ajax({
-                    url: '/filelist/download-confirm',
-                    data: { path: path },
-                    type: 'POST'
-                });
+            helper.addClickListener('.filelist-download-confirm', '/filelist/download-confirm', {
+                dataProcessor: function(data, el) {
+                    data.path = $(el).attr('data-filelist-path');
+                    data.categoryId = $('#filelistModal').find('.filelist-download-category').val();
+                    return data;
+                }
             });
 
             $('.filelist-search').livequery(function() {

@@ -7,15 +7,6 @@ var downloads = require('./downloads');
 var settings = require('./settings');
 var database = require('../database.js');
 var util = require('./util.js');
-var configHelper = require('../configHelper.js');
-var config = require('../config.js');
-
-configHelper.defineMultiple(
-    [
-        { key: 'defaultUser', defaultValue: 'admin' },
-        { key: 'defaultPassword', defaultValue: 'admin' }
-    ]
-);
 
 module.exports.apply = function(dependencies, app) {
     app.all('/login', function(req, res) {
@@ -41,21 +32,8 @@ module.exports.apply = function(dependencies, app) {
                     }
                 });
             } else {
-                models.User.count().success(function(c) {
-                    if (c === 0) {
-                        models.User.create({
-                            name: config.defaultUser,
-                            password: util.hash(config.defaultPassword),
-                            isAdmin: true
-                        }).success(function(user) {
-                            req.session.user = user;
-                            res.redirect('/');
-                        });
-                    } else {
-                        renderdata.error = '';
-                        res.render('login', renderdata);
-                    }
-                });
+                renderdata.error = '';
+                res.render('login', renderdata);
             }
         });
     });

@@ -8,8 +8,14 @@ module.exports = {
     fs_check_interval: 60 * 24, //24 hours
     download_retry_interval: 5, //5 minutes
     downloadDir: __dirname + '/download/',
-    defaultUser: 'admin',
-    defaultPassword: 'admin',
+    defaultUser: {
+        name: 'admin',
+        password: 'admin'
+    },
+    defaultCategory: {
+        name: 'Default',
+        destination: __dirname + '/download'
+    },
     pathmapperCacheSize: 10000,
     rsync: {
         maxDepth: 6,

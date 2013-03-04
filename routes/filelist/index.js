@@ -14,21 +14,24 @@ module.exports.apply = function(dependencies, app) {
     app.post('/filelist/download', function(req, res) {
         if (req.body.path !== undefined) {
             var path = req.body.path;
-            res.render(
-                'filelist-download',
-                { path: path },
-                function(err, content) {
-                    res.json({ type: 'success', content: content});
-                }
-            );
+            database(function(err, models) {
+                models.Category.all().success(function(categories) {
+                    res.render(
+                        'filelist-download',
+                        {
+                            path: path,
+                            categories: categories
+                        },
+                        function(err, content) {
+                            res.json({ type: 'success', content: content});
+                        }
+                    );
+                }).error(function() {
+                    util.sendError(res, 'Invalid Request!');
+                });
+            });
         } else {
-            res.render(
-                'error-box',
-                { message: 'Invalid request!' },
-                function(err, content) {
-                    res.json({ type: 'error', content: content});
-                }
-            );
+            util.sendError(res, 'Invalid Request!');
         }
     });
 
@@ -84,26 +87,30 @@ module.exports.apply = function(dependencies, app) {
     });
 
     app.post('/filelist/download-confirm', function(req, res) {
-        if (req.body.path !== undefined) {
+        if (req.body.hasOwnProperty('path') && req.body.hasOwnProperty('categoryId')) {
+            var categoryId = parseInt(req.body.categoryId, 10);
             database(function(err, models) {
-                models.Download.create({
-                    path: req.body.path,
-                    progress: 0
-                }).success(function(download) {
-                    download.setUser(req.session.user).success(function(download) {
+                if (err) {
+                    return util.sendError(res, err);
+                }
+                models.Category.find(categoryId).success(function(cat) {
+                    models.Download.create({
+                        path: req.body.path,
+                        CategoryId: categoryId,
+                        UserId: req.session.user.id,
+                        progress: 0
+                    }).success(function(download) {
                         dependencies.downloadManager.addDownload(download);
                         util.sendSuccess(res);
                     }).error(function(err) {
-                        download.destroy().success(function() {
-                            util.sendError(res, err);
-                        }).error(function() {
-                            util.sendError(res, err);
-                        });
+                        util.sendError(res, err);
                     });
+                }).error(function(err) {
+                    util.sendError(res, err);
                 });
             });
         } else {
-            res.end();
+            util.sendError(res, 'Invalid Request!');
         }
     });
 };

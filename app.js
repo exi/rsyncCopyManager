@@ -14,13 +14,19 @@ var express = require('express'),
     serverQueue = require('./serverQueue.js').Queue,
     pathMapper = require('./pathMapper.js'),
     lessMiddleware = require('less-middleware'),
-    eventEmitter = require('events').EventEmitter;
+    eventEmitter = require('events').EventEmitter,
+    Promise = require('node-promise').Promise,
+    all = require('node-promise').all;
 
 configHelper.defineMultiple(
     [
         { key: 'cookieSecret', defaultValue: 'soosecret' },
         { key: 'port', defaultValue: 8080 },
-        { key: 'uid', defaultValue: process.getuid() }
+        { key: 'uid', defaultValue: process.getuid() },
+        { key: 'defaultUser.name', defaultValue: 'admin' },
+        { key: 'defaultUser.password', defaultValue: 'admin' },
+        { key: 'defaultCategory.name', defaultValue: 'Default' },
+        { key: 'defaultCategory.destination', defaultValue: __dirname + '/download' }
     ]
 );
 
@@ -64,23 +70,58 @@ dependencies.pathMapper = new pathMapper(dependencies);
 routes.apply(dependencies, app);
 
 // sync db
-database(function() {});
+database(function(err, models) {
+    var userp = new Promise();
+    var categoryp = new Promise();
 
-var server = http.createServer(app);
-function listenCallback() {
-    process.setuid(config.uid);
-    console.log("Express server listening on port %d in %s mode", server.address().port, app.settings.env);
-}
+    models.User.count().success(function(c) {
+        if (c > 0) {
+            userp.resolve();
+        } else {
+            models.User.create({
+                name: config.defaultUser.name,
+                password: util.hash(config.defaultUser.password),
+                isAdmin: true
+            }).success(function(user) {
+                userp.resolve();
+            });
+        }
+    });
 
-if (config.ip) {
-    server.listen(config.port, config.ip, listenCallback);
-} else {
-    server.listen(config.port, listenCallback);
-}
+    models.Category.count().success(function(c) {
+        if (c > 0) {
+            categoryp.resolve();
+        } else {
+            models.Category.create({
+                name: config.defaultCategory.name,
+                destination: config.defaultCategory.destination
+            }).success(function(user) {
+                categoryp.resolve();
+            });
+        }
+    });
+
+    all([userp, categoryp]).then(function() {
+        var server = http.createServer(app);
+        function listenCallback() {
+            process.setuid(config.uid);
+            console.log("Express server listening on port %d in %s mode", server.address().port, app.settings.env);
+        }
+
+        if (config.ip) {
+            server.listen(config.port, config.ip, listenCallback);
+        } else {
+            server.listen(config.port, listenCallback);
+        }
+    });
+});
+
 
 process.on('uncaughtException', function(e) {
     console.log(e);
-    console.log(e.stack);
+    if (e.stack) {
+        console.log(e.stack);
+    }
     console.trace();
     dependencies.downloadManager.close();
     dependencies.serverManager.close();

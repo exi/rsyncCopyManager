@@ -38,15 +38,73 @@
 .jqueryFileTree span {
   padding-right: 5px;
 }
+.filelist-tree.jqueryFileTree LI.wait {
+  background: url(../images/pacman.gif) left top no-repeat;
+  background-size: 16px 16px;
+}
+/* Base class */
+.case-users {
+  position: relative;
+  margin: 15px 0;
+  padding: 39px 19px 14px;
+  *padding-top: 19px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+/* Echo out a label for the example */
+.case-users:after {
+  content: "Users";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: bold;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #9da0a4;
+  -webkit-border-radius: 4px 0 4px 0;
+  -moz-border-radius: 4px 0 4px 0;
+  border-radius: 4px 0 4px 0;
+}
+/* Base class */
+.case-categories {
+  position: relative;
+  margin: 15px 0;
+  padding: 39px 19px 14px;
+  *padding-top: 19px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+/* Echo out a label for the example */
+.case-categories:after {
+  content: "Categories";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: bold;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #9da0a4;
+  -webkit-border-radius: 4px 0 4px 0;
+  -moz-border-radius: 4px 0 4px 0;
+  border-radius: 4px 0 4px 0;
+}
 body {
   padding-top: 40px;
 }
-.loading-screen,
-.jquerFileTree.wait {
+.loading-screen {
   text-align: center;
   height: 200px;
 }
-.loading-screen img,
-.jquerFileTree.wait img {
+.loading-screen img {
   padding-top: 190px;
 }

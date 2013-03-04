@@ -1,57 +1,14 @@
-define(['jquery'], function($) {
+define(['jquery', 'helper'], function($, helper) {
     return {
         apply: function() {
-            $('.add-server-form').livequery('submit', function(evt) {
-                if (evt && evt.preventDefault) {
-                    evt.preventDefault();
-                }
+            helper.addFormHandler('.add-server-form', '/servers/add', { replaceQuery: '.servers-list' });
 
-                $(this).find('.form-status').empty();
+            helper.addClickListener('.server-delete', '/servers/del', { idAttr: 'data-server-id', replaceQuery: '.servers-list' });
+            helper.addClickListener('.server-rescan', '/servers/rescan', { idAttr: 'data-server-id' });
 
-                var d = {};
-                var data = $(this).serializeArray().forEach(function(item) {
-                    d[item.name] = item.value;
-                });
-                var this_ = this;
-
-                $.ajax({
-                    url: '/servers/add',
-                    data: d,
-                    type: 'POST'
-                }).done(function(data) {
-                    if (data && data.type && data.content) {
-                        if (data.type == 'error') {
-                            $(this_).find('.form-status').html(data.content);
-                        } else if (data.type == 'success') {
-                            $('.servers-list').html(data.content);
-                        }
-                    }
-                });
-                return false;
-            });
-
-            $('.server-delete').livequery('click', function(event) {
-                var id = $(this).attr('data-server-id');
-                $(this).addClass('loading');
-                $.ajax({
-                    url: '/servers/del',
-                    data: { id: id },
-                    type: 'POST'
-                }).done(function(data) {
-                    if (data && data.content) {
-                        $('.servers-list').html(data.content);
-                    }
-                });
-            });
-
-            $('.server-rescan').livequery('click', function(event) {
-                var id = $(this).attr('data-server-id');
-                $(this).addClass('loading');
-                $.ajax({
-                    url: '/servers/rescan',
-                    data: { id: id },
-                    type: 'POST'
-                });
+            helper.addTextFieldListener('.server-limit', 'data-server-id', '/servers/setLimit', 'limit', function(data) {
+                data.limit = data.limit === '' ? 0 : data.limit;
+                return data;
             });
 
             $('.server-status-list').livequery(function() {
@@ -81,23 +38,6 @@ define(['jquery'], function($) {
                 updatefunc();
             }, function() {
                 clearTimeout(this.refreshTimer);
-            });
-
-            $('.server-limit').livequery('change', function(event) {
-                var id = $(this).attr('data-server-id');
-                var this_ = this;
-                var limit = $(this).val();
-                limit = limit === '' ? 0 : limit;
-                $.ajax({
-                    url: '/servers/setLimit',
-                    data: { id: id, limit: limit },
-                    type: 'POST'
-                }).always(function(data) {
-                    if (data && (data.type === 'error' || data.type === 'success')) {
-                        $(this_).removeClass('error success');
-                        $(this_).addClass(data.type);
-                    }
-                });
             });
         }
     };
