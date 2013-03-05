@@ -168,6 +168,27 @@ var Download = module.exports = function(dependencies, modelInstance) {
         return p;
     };
 
+    function refreshModelInstance() {
+        var p = new Promise();
+        var efun = function(err) {
+            p.reject(err);
+        };
+
+        database(function(err, models) {
+            if (err) {
+                efun(err);
+            }
+            models.Download.find(modelInstance.id).success(function(model) {
+                if (model === null) {
+                    return efun(new Error('Download not found!'));
+                }
+                modelInstance = model;
+                p.resolve(model);
+            }).error(efun);
+        });
+        return p;
+    }
+
     function updateLastSeen(server) {
         server.last_seen = new Date();
         server.save(['last_seen']);
@@ -432,18 +453,22 @@ var Download = module.exports = function(dependencies, modelInstance) {
 
     function findCategoryDir() {
         var p = new Promise();
+        var efun = function(err) {
+            p.reject(err);
+        };
+
         database(function(err, models) {
             if (err) {
-                return p.reject(err);
+                return efun(err);
             }
-            models.Category.find(modelInstance.CategoryId).success(function(cat) {
-                if (cat === null) {
-                    return p.resolve(config.downloadDir);
-                }
-                p.resolve(cat.destination);
-            }).error(function(err) {
-                p.reject(err);
-            });
+            refreshModelInstance().then(function(model) {
+                models.Category.find(model.CategoryId).success(function(cat) {
+                    if (cat === null) {
+                        return p.resolve(config.downloadDir);
+                    }
+                    p.resolve(cat.destination);
+                }).error(efun);
+            }, efun);
         });
         return p;
     }
