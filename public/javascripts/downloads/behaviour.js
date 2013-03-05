@@ -60,7 +60,12 @@ define(['jquery', 'helper'], function($, helper) {
             $('.download-delete-confirm').livequery(function() {
                 var id = $(this).attr('data-download-id');
                 var this_ = this;
-                var deleteData = true;
+                var deleteData = $(this).find('.download-delete-data').is(':checked');
+
+                $(this).find('.download-delete-data').bind('click', function() {
+                    deleteData = $(this).is(':checked');
+                });
+
                 $(this).find('.download-delete-confirm-button').bind('click', function() {
                     $.ajax({
                         url: '/downloads/del-confirm',
@@ -75,10 +80,6 @@ define(['jquery', 'helper'], function($, helper) {
                             }
                         }
                     });
-                });
-
-                $(this).find('.download-delete-data').bind('click', function() {
-                    deleteData = $(this).is(':checked');
                 });
             }, function() {
                 $(this).find('.download-delete-confirm-button').unbind('click');

@@ -297,6 +297,7 @@ module.exports.apply = function(dependencies, app) {
                 'downloads-delete',
                 { 
                     path: download.path,
+                    complete: download.complete,
                     id: download.id
                 },
                 function(err, content) {

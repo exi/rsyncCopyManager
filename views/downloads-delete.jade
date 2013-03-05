@@ -6,7 +6,7 @@
   p #{path}
 .modal-footer.download-delete-confirm(data-download-id='#{id}')
   label.checkbox.pull-left
-    input.download-delete-data(type='checkbox', checked='checked')
+    input.download-delete-data(type='checkbox', checked=(complete ? null : 'checked'))
     p Delete data?
   button.btn(data-dismiss='modal', aria-hidden='true') No
   button.btn.btn-primary.download-delete-confirm-button(data-dismiss='modal') Yes
