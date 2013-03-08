@@ -5,6 +5,7 @@
   , "dependencies": {
       "express": "*"
     , "jade": "*"
+    , "mysql": "*"
     , "less-middleware": "*"
     , "sequelize": "git://github.com/sequelize/sequelize.git#master"
     , "lodash": "*"

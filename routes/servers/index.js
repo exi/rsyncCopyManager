@@ -103,6 +103,30 @@ function getServerWithId(req, id) {
     return p;
 }
 
+function getFileCount(serverId) {
+    var p = new Promise();
+
+    function reject(err) {
+        p.reject(err);
+    }
+
+    database(function(err, models) {
+        if (err) {
+            return reject(err);
+        }
+        models.Server.find(serverId).success(function(server) {
+            if (server === null) {
+                return reject('server not found');
+            }
+            models.FSEntry.count({ where: { ServerId: server.id }}).success(function(c) {
+                p.resolve(c);
+            }).error(reject);
+        }).error(reject);
+    });
+
+    return p;
+}
+
 module.exports.apply = function(dependencies, app) {
     app.post('/servers', function(req, res) {
         getServers(req.session.user).then(function(servers) {
@@ -219,49 +243,56 @@ module.exports.apply = function(dependencies, app) {
             var promises = [];
             var statuses = [];
             servers.forEach(function(server) {
-                promises.push(dependencies.serverManager.getServerStatus(server.id).then(function(status) {
-                    var msgs = [];
+                promises.push(all([
+                        dependencies.serverManager.getServerStatus(server.id),
+                        getFileCount(server.id)
+                    ]).then(function(data) {
+                        var status = data[0];
+                        var filecount = data[1];
+                        var msgs = [];
 
-                    if (status.fsCheckInProgress === true) {
-                        msgs.push('Scanning filesystem');
-                    }
+                        if (status.fsCheckInProgress === true) {
+                            msgs.push('Scanning filesystem');
+                        }
 
-                    if (status.processingStatus) {
-                        msgs.push('processing ' + status.processingStatus.complete + '/' + status.processingStatus.total);
-                    }
+                        if (status.processingStatus) {
+                            msgs.push('processing ' + status.processingStatus.complete + '/' + status.processingStatus.total);
+                        }
 
-                    if (status.waitForClose === true) {
-                        msgs.push('Closing connection');
-                    }
+                        if (status.waitForClose === true) {
+                            msgs.push('Closing connection');
+                        }
 
-                    if (status.serverOffline === true) {
-                        msgs.push('Offline');
-                    }
+                        if (status.serverOffline === true) {
+                            msgs.push('Offline');
+                        }
 
-                    var msg = msgs.length === 0 ? 'Idle' : msgs.join(', ');
-                    var content = {
-                        id: server.id,
-                        msg: util.escapeHtml(msg)
-                    };
-
-                    if (status.lastErrorOutput) {
-                        content.errorOutput = util.escapeHtml(status.lastErrorOutput);
-                    }
-
-                    statuses.push(content);
-                }, function(err) {
-                    if (err) {
-                        statuses.push({
+                        var msg = msgs.length === 0 ? 'Idle' : msgs.join(', ');
+                        var content = {
                             id: server.id,
-                            msg: err.message
-                        });
-                    } else {
-                        statuses.push({
-                            id: server.id,
-                            msg: 'Unknown error occured'
-                        });
-                    }
-                }));
+                            msg: util.escapeHtml(msg),
+                            filecount: filecount
+                        };
+
+                        if (status.lastErrorOutput) {
+                            content.errorOutput = util.escapeHtml(status.lastErrorOutput);
+                        }
+
+                        statuses.push(content);
+                    }, function(err) {
+                        if (err) {
+                            statuses.push({
+                                id: server.id,
+                                msg: err.message
+                            });
+                        } else {
+                            statuses.push({
+                                id: server.id,
+                                msg: 'Unknown error occured'
+                            });
+                        }
+                    })
+                );
             });
             all(promises).then(function() {
                 util.sendSuccess(res, statuses);

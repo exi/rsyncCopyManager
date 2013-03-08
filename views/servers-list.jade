@@ -6,6 +6,7 @@ if (servers.length > 0)
         th User
         th Path
         th Limit
+        th Files
         th Status
         th
     each server in servers
@@ -18,6 +19,7 @@ if (servers.length > 0)
             .input-append
               input.span1.server-limit(placeholder='Limit', value='#{server.limit}', type='text', data-server-id='#{server.id}')
               span.add-on KB
+          td.server-status-filecount
           td.server-status-text
           td
             button.btn.btn-primary.server-rescan(type='button', data-server-id='#{server.id}') Rescan

@@ -24,6 +24,9 @@ define(['jquery', 'helper'], function($, helper) {
                                 if (status.msg) {
                                     $(parent).find('.server-status-text').html(status.msg);
                                 }
+                                if (status.filecount) {
+                                    $(parent).find('.server-status-filecount').html(status.filecount);
+                                }
                                 if (status.errorOutput) {
                                     $(parent).find('.server-status-error-container').css('display', '');
                                     $(parent).find('.server-status-error-output').html(status.errorOutput);

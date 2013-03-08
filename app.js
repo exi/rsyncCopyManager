@@ -16,6 +16,7 @@ var express = require('express'),
     lessMiddleware = require('less-middleware'),
     eventEmitter = require('events').EventEmitter,
     Promise = require('node-promise').Promise,
+    util = require('./routes/util.js'),
     all = require('node-promise').all;
 
 configHelper.defineMultiple(
