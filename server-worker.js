@@ -259,7 +259,6 @@ var Server = function(modelInstance) {
                     }
                     var match = d[0];
                     var p = d[1];
-                    processingStatus.complete++;
 
                     var handle;
                     if (match === null) {
@@ -307,7 +306,7 @@ var Server = function(modelInstance) {
                 files.forEach(insertOrUpdate);
                 serverOffline = false;
                 lastErrorOutput = null;
-                processingStatus.total += files.length * 2;
+                processingStatus.total += files.length;
                 if (chainLength > maxChainLength && rsyncp.suspended === false) {
                     rsyncp.suspend();
                 }
