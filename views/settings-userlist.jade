@@ -12,10 +12,10 @@
           tr
             td= user.name
             td
-              input.span2.userlist-password(placeholder='New password', type='password', data-user-id='#{user.id}')
+              input.span2.userlist-password(placeholder='New password', type='password', data-id='#{user.id}')
             td
-              input.userlist-isAdmin(type='checkbox', checked=(user.isAdmin === true ? 'checked' : undefined), data-user-id='#{user.id}')
+              input.userlist-isAdmin(type='checkbox', checked=(user.isAdmin === true ? 'checked' : undefined), data-id='#{user.id}')
             td
-              button.btn.btn-danger.userlist-delete(type='button', data-loading-text='Deleting...', data-user-id='#{user.id}') Delete
+              button.btn.btn-danger.userlist-delete(type='button', data-loading-text='Deleting...', data-id='#{user.id}') Delete
   else
     p You did not add any users yet.

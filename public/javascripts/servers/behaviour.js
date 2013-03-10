@@ -3,10 +3,10 @@ define(['jquery', 'helper'], function($, helper) {
         apply: function() {
             helper.addFormHandler('.add-server-form', '/servers/add', { replaceQuery: '.servers-list' });
 
-            helper.addClickListener('.server-delete', '/servers/del', { idAttr: 'data-server-id', replaceQuery: '.servers-list' });
-            helper.addClickListener('.server-rescan', '/servers/rescan', { idAttr: 'data-server-id' });
+            helper.addClickListener('.server-delete', '/servers/del', { replaceQuery: '.servers-list' });
+            helper.addClickListener('.server-rescan', '/servers/rescan');
 
-            helper.addTextFieldListener('.server-limit', 'data-server-id', '/servers/setLimit', 'limit', function(data) {
+            helper.addTextFieldListener('.server-limit', '/servers/setLimit', 'limit', function(data) {
                 data.limit = data.limit === '' ? 0 : data.limit;
                 return data;
             });
@@ -20,7 +20,7 @@ define(['jquery', 'helper'], function($, helper) {
                     }).always(function(data) {
                         if (data && data.type === 'success' && data.content && data.content.length) {
                             data.content.forEach(function(status) {
-                                var parent = $('.server-status[data-server-id="' + status.id + '"]');
+                                var parent = $('.server-status[data-id="' + status.id + '"]');
                                 if (status.msg) {
                                     $(parent).find('.server-status-text').html(status.msg);
                                 }

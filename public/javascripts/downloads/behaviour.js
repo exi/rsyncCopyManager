@@ -10,7 +10,7 @@ define(['jquery', 'helper'], function($, helper) {
                     }).always(function(data) {
                         if (data && data.type === 'success' && data.content && data.content.length) {
                             data.content.forEach(function(status) {
-                                var row = $(this_).find('.download-status[data-download-id="' + status.id + '"]');
+                                var row = $(this_).find('.download-status[data-id="' + status.id + '"]');
                                 if (status.status !== undefined) {
                                     $(row).find('.download-status-text').html(status.status);
                                 }
@@ -50,7 +50,6 @@ define(['jquery', 'helper'], function($, helper) {
 
 
             helper.addClickListener('.download-delete', '/downloads/del', {
-                idAttr: 'data-download-id',
                 replaceQuery: '#downloadsModal',
                 onSuccess: function() {
                     $('#downloadsModal').modal('show');
@@ -58,7 +57,7 @@ define(['jquery', 'helper'], function($, helper) {
             });
 
             $('.download-delete-confirm').livequery(function() {
-                var id = $(this).attr('data-download-id');
+                var id = $(this).attr('data-id');
                 var this_ = this;
                 var deleteData = $(this).find('.download-delete-data').is(':checked');
 
@@ -76,7 +75,7 @@ define(['jquery', 'helper'], function($, helper) {
                             if (data.content) {
                                 $('.downloads-list').html(data.content);
                             } else {
-                                $('.download-status[data-download-id="' + id + '"]').remove();
+                                $('.download-status[data-id="' + id + '"]').remove();
                             }
                         }
                     });
@@ -87,7 +86,7 @@ define(['jquery', 'helper'], function($, helper) {
             });
 
             $('.download-category').livequery('change', function(evt) {
-                var id = $(this).attr('data-download-id');
+                var id = $(this).attr('data-id');
                 var val = $(this).val();
                 $.ajax({
                     url: '/downloads/changeCategory',

@@ -12,11 +12,11 @@ if (downloads.length > 0)
         th
     tbody
       each download in downloads
-        tr.download-status(data-download-id='#{download.id}')
+        tr.download-status(data-id='#{download.id}')
           td= download.path
           td
             if (download.owns === true && download.canEditCategory)
-              select.span2.download-category(name='category', data-download-id='#{download.id}')
+              select.span2.download-category(name='category', data-id='#{download.id}')
                 each category in categories
                   option(value='#{category.id}', selected=(download.categoryId == category.id ? 'selected' : null))= category.name
             else
@@ -30,7 +30,7 @@ if (downloads.length > 0)
           td.download-status-text
           td
             if (download.owns === true)
-              button.btn.btn-danger.download-delete(type='button', data-loading-text='Deleting...', data-download-id='#{download.id}') Delete
+              button.btn.btn-danger.download-delete(type='button', data-loading-text='Deleting...', data-id='#{download.id}') Delete
 
 else
   p No active downloads.

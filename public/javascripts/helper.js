@@ -3,19 +3,18 @@ define(['jquery'], function($) {
         $(form).find('input').val('');
     }
 
+    function hasId(node) {
+        return $(node).attr('data-id') === undefined ? false : true;
+    }
+
     return {
         addFormHandler: function(query, url, options) {
             var doReplace = false;
-            var useId = false;
 
             options = options || {};
 
             if (options.hasOwnProperty('replaceQuery')) {
                 doReplace = true;
-            }
-
-            if (options.hasOwnProperty('idAttr')) {
-                useId = true;
             }
 
             $(query).livequery('submit', function(evt) {
@@ -28,8 +27,8 @@ define(['jquery'], function($) {
                 var this_ = this;
                 var d = {};
 
-                if (useId) {
-                    d.id = $(this).attr(options.idAttr);
+                if (hasId(this)) {
+                    d.id = $(this).attr('data-id');
                 }
 
                 var data = $(this).serializeArray().forEach(function(item) {
@@ -57,9 +56,9 @@ define(['jquery'], function($) {
             });
         },
 
-        addTextFieldListener: function(query, idAttr, url, key, dataProcessor) {
+        addTextFieldListener: function(query, url, key, dataProcessor) {
             $(query).livequery('change', function(evt) {
-                var id = $(this).attr(idAttr);
+                var id = $(this).attr('data-id');
                 var val = $(this).val();
                 var this_ = this;
                 var data = {
@@ -82,7 +81,6 @@ define(['jquery'], function($) {
 
         addClickListener: function(query, url, options) {
             var doReplace = false;
-            var useId = false;
             var customData = false;
             var hasSCallback = false;
             var hasCallbacks = false;
@@ -91,10 +89,6 @@ define(['jquery'], function($) {
 
             if (options.hasOwnProperty('replaceQuery')) {
                 doReplace = true;
-            }
-
-            if (options.hasOwnProperty('idAttr')) {
-                useId = true;
             }
 
             if (options.hasOwnProperty('dataProcessor')) {
@@ -109,8 +103,8 @@ define(['jquery'], function($) {
             $(query).livequery('click', function(event) {
                 var d = {};
 
-                if (useId) {
-                    d.id = $(this).attr(options.idAttr);
+                if (hasId(this)) {
+                    d.id = $(this).attr('data-id');
                 }
 
                 var req = $.ajax({

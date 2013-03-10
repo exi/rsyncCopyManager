@@ -10,10 +10,10 @@
         each category in categories
           tr
             td
-              input.span5.categorylist-name(placeholder='New name', type='text', value='#{category.name}', data-category-id='#{category.id}')
+              input.span5.categorylist-name(placeholder='New name', type='text', value='#{category.name}', data-id='#{category.id}')
             td
-              input.span5.categorylist-destination(placeholder='New destination', type='text', value='#{category.destination}', data-category-id='#{category.id}')
+              input.span5.categorylist-destination(placeholder='New destination', type='text', value='#{category.destination}', data-id='#{category.id}')
             td
-              button.btn.btn-danger.categorylist-delete(type='button', data-loading-text='Deleting...', data-category-id='#{category.id}') Delete
+              button.btn.btn-danger.categorylist-delete(type='button', data-loading-text='Deleting...', data-id='#{category.id}') Delete
   else
     p You did not add any categories yet.

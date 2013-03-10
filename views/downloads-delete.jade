@@ -4,7 +4,7 @@
 .modal-body
   p Do you want to delete the download? This will delete the downloaded files.
   p #{path}
-.modal-footer.download-delete-confirm(data-download-id='#{id}')
+.modal-footer.download-delete-confirm(data-id='#{id}')
   label.checkbox.pull-left
     input.download-delete-data(type='checkbox', checked=(complete ? null : 'checked'))
     p Delete data?
