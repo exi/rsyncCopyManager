@@ -109,9 +109,11 @@ var pathmapper = module.exports = function(dependencies) {
                 wheres.push(database.format(['ServerId != ?', serverId]));
             });
 
+            var incWheres = [];
             options.include.forEach(function(serverId) {
-                wheres.push(database.format(['ServerId = ?', serverId]));
+                incWheres.push(database.format(['ServerId = ?', serverId]));
             });
+            wheres.push('(' + incWheres.join(' OR ') + ')');
 
             wheres.sort();
 
