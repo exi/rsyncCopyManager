@@ -316,14 +316,13 @@ var Server = function(modelInstance) {
                 fetchPack().then(function() {
                     console.log('fetchpack done');
                     var p = new Promise();
-                    var oldrevision = modelInstance.fse_revision;
                     modelInstance.fse_revision = revision;
                     modelInstance.save().done(function(err) {
                         if (err) {
                             return p.reject(err);
                         }
                         database.query(
-                            'DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ' AND revision=' + oldrevision + ';'
+                            'DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ' AND revision<' + revision + ';'
                         ).done(function(err) {
                             if (err) {
                                 return p.reject(err);
