@@ -5,5 +5,9 @@
 
   form.form-search.filelist-form-search
     input.input-medium.search-query.filelist-search(type='text', placeholder='Search')
+    select.input-medium.filelist-search-range
+      option(value='all') All
+      option(value='own') Only mine
+      option(value='other') Not mine
 
-  .filelist-tree.jqueryFileTree(style="min-height: 100px;")
+  .filelist-tree.jqueryFileTree(style='min-height: 100px;')

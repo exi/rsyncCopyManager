@@ -2,6 +2,7 @@ var database = require('./database.js');
 var Promise = require('node-promise').Promise;
 var configHelper = require('./configHelper.js');
 var config = require('./config.js');
+var _ = require('lodash');
 
 configHelper.define({ key: 'pathmapperCacheSize', defaultValue: 1000 });
 
@@ -91,24 +92,37 @@ var pathmapper = module.exports = function(dependencies) {
         return basemap;
     }
 
-    api.getDirectoryContent = function(path, searchWords) {
+    api.getDirectoryContent = function(path, options) {
         var p = new Promise();
-        searchWords = searchWords || [];
+
+        options = _.merge({ searchWords: [], exclude: [], include: []}, options);
 
         database(function(err, models, sequelize) {
             var depth = path === '' ? 0 : path.split('/').length;
+
             var wheres = [database.format(['path LIKE ?', '' + path + '%'])];
-            searchWords = searchWords || [];
-            searchWords.forEach(function(word) {
+            options.searchWords.forEach(function(word) {
                 wheres.push(database.format(['path LIKE ?', '%' + word + '%']));
             });
+
+            options.exclude.forEach(function(serverId) {
+                wheres.push(database.format(['ServerId != ?', serverId]));
+            });
+
+            options.include.forEach(function(serverId) {
+                wheres.push(database.format(['ServerId = ?', serverId]));
+            });
+
             wheres.sort();
+
             var where = wheres.length > 0 ? 'WHERE ' + wheres.join(' AND ') : '';
+
             var query = 'SELECT SUBSTRING_INDEX(path, \'/\', ' + (depth + 1) + ') AS subpath, ' +
                 '(LENGTH(path) - LENGTH(REPLACE(path, \'/\', \'\'))) as depth, ' +
                 'id FROM `FSEntries` ' +
                 where + ' GROUP BY subpath;';
             var fromCache = findCache(query);
+
             if (fromCache !== null) {
                 p.resolve(fromCache);
             } else {
@@ -143,7 +157,7 @@ var pathmapper = module.exports = function(dependencies) {
                             p.resolve(result);
                         });
                     }
-        );
+                );
             }
         });
 

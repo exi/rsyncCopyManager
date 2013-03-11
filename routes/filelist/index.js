@@ -1,5 +1,57 @@
 var database = require('../../database.js');
 var util = require('../util.js');
+var Promise = require('node-promise').Promise;
+var when = require('node-promise').when;
+var _ = require('lodash');
+
+function getExtFromName(name) {
+    var extstart = name.lastIndexOf('.');
+    var ext = extstart === -1 ? '' : name.substring(extstart + 1, name.length);
+    return ext;
+}
+
+function fseSortFunction(a, b) {
+    return a.name.localeCompare(b.name);
+}
+
+function getServerIds(user) {
+    var p = new Promise();
+
+    user.getServers().success(function(servers) {
+        servers = servers.map(function(s) {
+            return s.id;
+        });
+        p.resolve(servers);
+    }).error(function reject(err) {
+        p.reject(err);
+    });
+
+    return p;
+}
+
+function includeOwnServerIds(user) {
+    var p = new Promise();
+
+    getServerIds(user).then(function(ids) {
+        p.resolve({ include: ids });
+    }, function(err) {
+        p.reject(err);
+    });
+
+    return p;
+}
+
+function excludeOwnServerIds(user) {
+    var p = new Promise();
+
+    getServerIds(user).then(function(ids) {
+        p.resolve({ exclude: ids });
+    }, function(err) {
+        p.reject(err);
+    });
+
+    return p;
+}
 
 module.exports.apply = function(dependencies, app) {
     app.post('/filelist', function(req, res) {
@@ -35,51 +87,64 @@ module.exports.apply = function(dependencies, app) {
         }
     });
 
-    function getExtFromName(name) {
-        var extstart = name.lastIndexOf('.');
-        var ext = extstart === -1 ? '' : name.substring(extstart + 1, name.length);
-        return ext;
-    }
-
-    function fseSortFunction(a, b) {
-        return a.name.localeCompare(b.name);
-    }
-
     app.post('/filelist/getDir', function(req, res) {
         if (req.body.dir !== undefined) {
             var dir = unescape(req.body.dir);
             dir = dir.length === 1 ? '' : dir.substring(1, dir.length - 1);
+
+            var user = req.session.user;
             var words = req.body.searchWords || [];
-            dependencies.pathMapper.getDirectoryContent(dir, words).then(function(fse) {
-                var dirs = [];
-                var files = [];
-                for (var name in fse.contents) {
-                    var item = fse.contents[name];
-                    if (item.stats) {
-                        if (item.stats.isDir) {
-                            dirs.push({
-                                name: name,
-                                rel: '/' + item.stats.path + '/',
-                                path: item.stats.path
-                            });
-                        } else {
-                            files.push({
-                                name: name,
-                                rel: '/' + item.stats.path,
-                                ext: getExtFromName(name),
-                                path: item.stats.path,
-                                size: util.convertToHumanReadableSize(item.stats.size)
-                            });
-                        }
-                    }
+            var range = [];
+            var include = false;
+            var exclude = false;
+
+            if (req.body.range === 'own') {
+                range = includeOwnServerIds(user);
+            } else if (req.body.range === 'other') {
+                range = excludeOwnServerIds(user);
+            }
+
+            var options = {
+                searchWords: words
+            };
+
+            when(range, function(opts) {
+                if (opts.hasOwnProperty('include') && opts.include.length === 0) {
+                    return util.sendError(res, 'You don\'t have any servers.');
                 }
 
-                dirs.sort(fseSortFunction);
-                files.sort(fseSortFunction);
+                options = _.merge(options, opts);
+                dependencies.pathMapper.getDirectoryContent(dir, options).then(function(fse) {
+                    var dirs = [];
+                    var files = [];
+                    for (var name in fse.contents) {
+                        var item = fse.contents[name];
+                        if (item.stats) {
+                            if (item.stats.isDir) {
+                                dirs.push({
+                                    name: name,
+                                    rel: '/' + item.stats.path + '/',
+                                    path: item.stats.path
+                                });
+                            } else {
+                                files.push({
+                                    name: name,
+                                    rel: '/' + item.stats.path,
+                                    ext: getExtFromName(name),
+                                    path: item.stats.path,
+                                    size: util.convertToHumanReadableSize(item.stats.size)
+                                });
+                            }
+                        }
+                    }
 
-                res.render('filelist-tree', { dirs: dirs, files: files });
-            }, function(err) {
-                res.end(err);
+                    dirs.sort(fseSortFunction);
+                    files.sort(fseSortFunction);
+
+                    res.render('filelist-tree', { dirs: dirs, files: files });
+                }, function(err) {
+                    res.end(err);
+                });
             });
         } else {
             res.end();

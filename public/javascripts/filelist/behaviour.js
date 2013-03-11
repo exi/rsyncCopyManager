@@ -8,7 +8,7 @@ define(['jquery', 'helper'], function($, helper) {
             var placeholder = null;
 
             $('.filelist-tree').livequery(function() {
-                $(this).fileTree({ root: '/', script: '/filelist/getDir' }, fileClickHandler);
+                $(this).fileTree({ }, fileClickHandler);
             });
 
             helper.addClickListener('.filelist-download', '/filelist/download', {
@@ -30,25 +30,34 @@ define(['jquery', 'helper'], function($, helper) {
                 }
             });
 
-            $('.filelist-search').livequery(function() {
-                this.lastval = '';
-                $(this).bind('keyup', function() {
-                    var val = $(this).val();
-                    if (this.lastval === val) {
-                        return;
-                    }
+            $('.filelist-form-search').livequery(function() {
+                var lastval = '';
+                var lastrange = 'all';
+                var submitTimer = null;
+                var this_ = this;
 
-                    clearTimeout(this.submitTimer);
-                    var this_ = this;
-                    this.submitTimer = setTimeout(function() {
-                        this_.lastval = val;
+                function onChange() {
+                    clearTimeout(submitTimer);
+                    submitTimer = setTimeout(function() {
+                        var val = $(this_).find('.filelist-search').val();
+                        var range = $(this_).find('.filelist-search-range').val();
+                        if (lastval === val && lastrange === range) {
+                            return;
+                        }
+
+                        lastval = val;
+                        lastrange = range;
                         var words = val.split(' ');
                         $('.filelist-tree').empty();
-                        $('.filelist-tree').fileTree({ root: '/', script: '/filelist/getDir', searchWords: words }, fileClickHandler);
+                        $('.filelist-tree').fileTree({ searchWords: words, range: range }, fileClickHandler);
                     }, 300);
-                });
+                }
+
+                $(this).find('.filelist-search').bind('keyup', onChange);
+                $(this).find('.filelist-search-range').bind('change', onChange);
             }, function() {
-                $(this).unbind('keypress');
+                $(this).find('.filelist-search').unbind('keyup');
+                $(this).find('.filelist-search-range').unbind('change');
             });
         }
     };
