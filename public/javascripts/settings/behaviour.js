@@ -6,7 +6,7 @@ define(['jquery', 'helper'], function($, helper) {
             helper.addFormHandler('.add-category-form', '/settings/addCategory', { replaceQuery: '.category-list' });
 
 
-            helper.addTextFieldListener('.userlist-password', '/settings/changePassword', 'passowrd', function(data) {
+            helper.addTextFieldListener('.userlist-password', '/settings/changePassword', 'password', function(data) {
                 data.passwordRepeat = data.password;
                 return data;
             });
