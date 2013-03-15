@@ -1,54 +1,54 @@
 var util = require('../util.js');
-var database = require('../../database.js');
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
 var fsHelper = require('../../fsHelper.js');
 
-function sendList(res, model, template, key) {
-    var efun = util.wrapErrorFunction(res);
-    model.all().success(function(data) {
-        var d = {};
-        d[key] = data;
-        res.render(
-            template,
-            d,
-            function(err, content) {
-                if (err) {
-                    return efun(err);
+module.exports.apply = function(deps, app) {
+
+    function sendList(res, model, template, key) {
+        var efun = util.wrapErrorFunction(res);
+        model.all().success(function(data) {
+            var d = {};
+            d[key] = data;
+            res.render(
+                template,
+                d,
+                function(err, content) {
+                    if (err) {
+                        return efun(err);
+                    }
+
+                    util.sendSuccess(res, content);
                 }
-
-                util.sendSuccess(res, content);
-            }
-        );
-    }).error(efun);
-}
-
-function sendUserList(res, models) {
-    sendList(res, models.User, 'settings-userlist', 'users');
-}
-
-function sendCategoryList(res, models) {
-    sendList(res, models.Category, 'settings-categorylist', 'categories');
-}
-
-function deleteCategory(category) {
-    var p = new Promise();
-    function reject(err) {
-        p.reject(err);
+                );
+        }).error(efun);
     }
 
-    database.query(
-        database.format(['UPDATE Downloads SET CategoryId = 1 WHERE CategoryId = ?;', category.id])
-    ).success(function() {
-        category.destroy().success(function() {
-            p.resolve();
-        }).error(reject);
-    }).error(reject);
+    function sendUserList(res, models) {
+        sendList(res, models.User, 'settings-userlist', 'users');
+    }
 
-    return p;
-}
+    function sendCategoryList(res, models) {
+        sendList(res, models.Category, 'settings-categorylist', 'categories');
+    }
 
-module.exports.apply = function(dependencies, app) {
+    function deleteCategory(category) {
+        var p = new Promise();
+        function reject(err) {
+            p.reject(err);
+        }
+
+        deps.database.query(
+                deps.database.format(['UPDATE Downloads SET CategoryId = 1 WHERE CategoryId = ?;', category.id])
+                ).success(function() {
+                    category.destroy().success(function() {
+                        p.resolve();
+                    }).error(reject);
+                }).error(reject);
+
+        return p;
+    }
+
     function deleteUser(user, models) {
         var userPromise = new Promise();
 
@@ -61,7 +61,7 @@ module.exports.apply = function(dependencies, app) {
         user.getServers().success(function(servers) {
             var sub = [];
             servers.forEach(function(server) {
-                sub.push(dependencies.serverManager.delServer(server.id));
+                sub.push(deps.serverManager.delServer(server.id));
             });
             All(sub).then(function() {
                 serverPromise.resolve();
@@ -75,7 +75,7 @@ module.exports.apply = function(dependencies, app) {
         user.getDownloads().success(function(downloads) {
             var sub = [];
             downloads.forEach(function(download) {
-                sub.push(dependencies.downloadManager.delDownload(download.id));
+                sub.push(deps.downloadManager.delDownload(download.id));
             });
             All(sub).then(function() {
                 downloadPromise.resolve();
@@ -99,7 +99,7 @@ module.exports.apply = function(dependencies, app) {
 
     app.post('/settings', function(req, res) {
         var efun = util.wrapErrorFunction(res);
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 return efun('Database error.');
             }
@@ -120,7 +120,7 @@ module.exports.apply = function(dependencies, app) {
                                 }
                                 util.sendSuccess(res, content);
                             }
-                        );
+                            );
                     }).error(efun);
                 }).error(efun);
             } else {
@@ -150,7 +150,7 @@ module.exports.apply = function(dependencies, app) {
         var admin = req.body.isAdmin === 'true';
 
         if (req.session.user.isAdmin) {
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 if (err) {
                     return efun('Database error.');
                 }
@@ -190,7 +190,7 @@ module.exports.apply = function(dependencies, app) {
         }
 
         if (req.session.user.isAdmin || req.session.user.id === id) {
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 if (err) {
                     return efun('Database error.');
                 }
@@ -238,7 +238,7 @@ module.exports.apply = function(dependencies, app) {
             return efun('Passwords do not match.');
         }
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 return efun('Database error.');
             }
@@ -262,7 +262,7 @@ module.exports.apply = function(dependencies, app) {
         var id = parseInt(req.body.id, 10);
 
         if (req.session.user.isAdmin) {
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 if (err) {
                     return efun('Database error.');
                 }
@@ -311,7 +311,7 @@ module.exports.apply = function(dependencies, app) {
             return efun('Destination is not a Directory!');
         }
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 return efun('Database error.');
             }
@@ -347,7 +347,7 @@ module.exports.apply = function(dependencies, app) {
             return efun('Destination is not a Directory!');
         }
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 return efun('Database error.');
             }
@@ -388,7 +388,7 @@ module.exports.apply = function(dependencies, app) {
         }
 
         if (req.session.user.isAdmin) {
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 if (err) {
                     return efun('Database error.');
                 }
@@ -407,5 +407,4 @@ module.exports.apply = function(dependencies, app) {
             return efun('Forbidden.');
         }
     });
-
 };

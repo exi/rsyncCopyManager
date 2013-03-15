@@ -9,7 +9,7 @@ var Token = module.exports.Token = function(startFunction, id) {
 
 util.inherits(Token, events.EventEmitter);
 
-var Queue = module.exports.Queue = function(dependencies) {
+var Queue = module.exports.Queue = function(deps) {
     var api = {};
 
     var servers = {};
@@ -66,7 +66,7 @@ var Queue = module.exports.Queue = function(dependencies) {
         }
     }
 
-    dependencies.eventBus.on('server-removed', function(serverId) {
+    deps.eventBus.on('server-removed', function(serverId) {
         if (servers.hasOwnProperty(serverId)) {
             console.log('server queue remove' + serverId);
             servers[serverId].queue.forEach(function(item) {

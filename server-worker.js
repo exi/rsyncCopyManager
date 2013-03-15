@@ -1,12 +1,16 @@
 var fs = require('fs');
-var rsync = require('./rsync');
-var database = require('./database.js');
-var configHelper = require('./configHelper.js');
-var config = require('./config.js');
+var deps = {
+    config: require('./config.js')
+};
+
+deps.configHelper = new (require('./configHelper.js'))(deps);
+deps.database = require('./database.js')(deps);
+
+var rsync = new (require('./rsync'))(deps);
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
 
-configHelper.defineMultiple(
+deps.configHelper.defineMultiple(
     [
         { key: 'keyfile' },
         { key: 'fs_check_interval', defaultValue: 60 * 24 }
@@ -49,7 +53,7 @@ var Server = function(modelInstance) {
         var p = new Promise();
 
         api.close().then(function() {
-            database.query('DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ';').done(function() {
+            deps.database.query('DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ';').done(function() {
                 modelInstance.destroy().done(function() {
                     p.resolve();
                 });
@@ -143,7 +147,7 @@ var Server = function(modelInstance) {
         }
         startedFsCheck();
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (stop) {
                 return finishedFsCheck();
             }
@@ -286,7 +290,7 @@ var Server = function(modelInstance) {
             }
 
             rsyncp = new rsync.filelist({
-                keyfile: config.keyfile,
+                keyfile: deps.config.keyfile,
                 username: modelInstance.username,
                 host: modelInstance.hostname,
                 src: modelInstance.path
@@ -321,7 +325,7 @@ var Server = function(modelInstance) {
                         if (err) {
                             return p.reject(err);
                         }
-                        database.query(
+                        deps.database.query(
                             'DELETE FROM FSEntries WHERE ServerId=' + modelInstance.id + ' AND revision<' + revision + ';'
                         ).done(function(err) {
                             if (err) {
@@ -345,7 +349,7 @@ var Server = function(modelInstance) {
 
     function periodicCheck() {
         var fstime = modelInstance.last_filelist_update;
-        var checkinterval = config.fs_check_interval * 60 * 1000;
+        var checkinterval = deps.config.fs_check_interval * 60 * 1000;
 
         if (!fstime || fstime === null || fstime.getTime() + checkinterval < Date.now()) {
             checkFileList();
@@ -379,7 +383,7 @@ process.on('message', function(data) {
         id = data.id;
         data = data.data;
         if (data.command === 'start' && data.serverId && instance === null) {
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 if (err) {
                     throw err;
                 }
@@ -431,8 +435,18 @@ function close() {
 }
 
 process.on('exit', function() {
+    console.trace();
     console.log('exiting server worker due to exit');
     close();
+});
+
+process.on('uncaughtException', function(e) {
+    console.log(e);
+    if (e.stack) {
+        console.log(e.stack);
+    }
+    console.trace();
+    process.exit(1);
 });
 
 process.on('disconnect', function() {

@@ -1,13 +1,12 @@
 
 /**
- * Module dependencies.
+ * Module deps.
  */
 
 var express = require('express'),
     routes = require('./routes'),
     http = require('http'),
     configHelper = require('./configHelper.js'),
-    config = require('./config.js'),
     database = require('./database.js'),
     serverManager = require('./serverManager.js'),
     downloadManager = require('./downloadManager.js'),
@@ -19,17 +18,14 @@ var express = require('express'),
     util = require('./routes/util.js'),
     all = require('node-promise').all;
 
-configHelper.defineMultiple(
-    [
-        { key: 'cookieSecret', defaultValue: 'soosecret' },
-        { key: 'port', defaultValue: 8080 },
-        { key: 'uid', defaultValue: process.getuid() },
-        { key: 'defaultUser.name', defaultValue: 'admin' },
-        { key: 'defaultUser.password', defaultValue: 'admin' },
-        { key: 'defaultCategory.name', defaultValue: 'Default' },
-        { key: 'defaultCategory.destination', defaultValue: __dirname + '/download' }
-    ]
-);
+var config;
+try {
+    config = require('./config.js');
+} catch (e) {
+    console.error('error loading config');
+    console.err(e);
+    process.exit(1);
+}
 
 var app = module.exports = express();
 
@@ -59,19 +55,35 @@ app.configure('production', function() {
 // Routes
 
 var eventBus = new eventEmitter();
-var dependencies = {
-    eventBus: eventBus
+var deps = {
+    eventBus: eventBus,
+    config: config
 };
 
-dependencies.serverManager = new serverManager(dependencies);
-dependencies.downloadManager = new downloadManager(dependencies);
-dependencies.serverQueue = new serverQueue(dependencies);
-dependencies.pathMapper = new pathMapper(dependencies);
+deps.configHelper = new configHelper(deps);
 
-routes.apply(dependencies, app);
+deps.configHelper.defineMultiple(
+    [
+        { key: 'cookieSecret', defaultValue: 'soosecret' },
+        { key: 'port', defaultValue: 8080 },
+        { key: 'uid', defaultValue: process.getuid() },
+        { key: 'defaultUser.name', defaultValue: 'admin' },
+        { key: 'defaultUser.password', defaultValue: 'admin' },
+        { key: 'defaultCategory.name', defaultValue: 'Default' },
+        { key: 'defaultCategory.destination', defaultValue: __dirname + '/download' }
+    ]
+);
+
+deps.database = new database(deps);
+deps.serverManager = new serverManager(deps);
+deps.downloadManager = new downloadManager(deps);
+deps.serverQueue = new serverQueue(deps);
+deps.pathMapper = new pathMapper(deps);
+
+routes.apply(deps, app);
 
 // sync db
-database(function(err, models) {
+deps.database(function(err, models) {
     var userp = new Promise();
     var categoryp = new Promise();
 
@@ -124,7 +136,7 @@ process.on('uncaughtException', function(e) {
         console.log(e.stack);
     }
     console.trace();
-    dependencies.downloadManager.close();
-    dependencies.serverManager.close();
+    deps.downloadManager.close();
+    deps.serverManager.close();
     process.exit(1);
 });

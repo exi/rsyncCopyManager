@@ -1,14 +1,11 @@
-var database = require('./database.js');
 var Download = require('./download.js');
 var Promise = require('node-promise').Promise;
 var rsync = require('./rsync.js');
-var configHelper = require('./configHelper.js');
-var config = require('./config.js');
 var exec = require('child_process').exec;
 
-configHelper.define({ key: 'downloadDir', dirMustExist: true, defaultValue: __dirname + '/download' });
+var DownloadManager = module.exports = function(deps) {
+    deps.configHelper.define({ key: 'downloadDir', dirMustExist: true, defaultValue: __dirname + '/download' });
 
-var DownloadManager = module.exports = function(dependencies) {
     var downloads = {};
     var api = {};
     var spaceLeft = 0;
@@ -18,7 +15,7 @@ var DownloadManager = module.exports = function(dependencies) {
         if (model && model.id) {
             downloads[model.id] = {
                 model: model,
-                manager: new Download(dependencies, model)
+                manager: new Download(deps, model)
             };
         }
     };
@@ -68,7 +65,7 @@ var DownloadManager = module.exports = function(dependencies) {
     };
 
     function updateSpace() {
-        exec('df -PBK "' + config.downloadDir + '" | tail -n1', function(err, stdout, stderr) {
+        exec('df -PBK "' + deps.config.downloadDir + '" | tail -n1', function(err, stdout, stderr) {
             if (!err) {
                 var regex = /[^ ]+\s+[^ ]+\s+[^ ]+\s+([^ ]+)\s+[^ ]/;
                 var m = regex.exec(stdout);
@@ -80,7 +77,7 @@ var DownloadManager = module.exports = function(dependencies) {
 
     updateSpace();
 
-    database(function(err, models) {
+    deps.database(function(err, models) {
         if (err) {
             throw err;
         }

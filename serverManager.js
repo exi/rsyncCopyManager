@@ -1,8 +1,7 @@
-var database = require('./database.js');
 var Server = require('./server.js');
 var Promise = require('node-promise').Promise;
 
-var ServerManager = module.exports = function(dependencies) {
+var ServerManager = module.exports = function(deps) {
     var servers = {};
     var api = {};
 
@@ -10,7 +9,7 @@ var ServerManager = module.exports = function(dependencies) {
         if (server && server.id) {
             servers[server.id] = {
                 model: server,
-                manager: new Server(dependencies, server.id)
+                manager: new Server(deps, server.id)
             };
         }
     };
@@ -22,7 +21,7 @@ var ServerManager = module.exports = function(dependencies) {
             var server = servers[serverId].manager;
             server.closeAndDelete().then(function() {
                 delete servers[serverId];
-                dependencies.eventBus.emit('server-removed', serverId);
+                deps.eventBus.emit('server-removed', serverId);
                 p.resolve();
             });
         } else {
@@ -64,7 +63,7 @@ var ServerManager = module.exports = function(dependencies) {
         }
     };
 
-    database(function(err, models) {
+    deps.database(function(err, models) {
         if (err) {
             throw err;
         }

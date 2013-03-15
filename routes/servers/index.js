@@ -1,140 +1,137 @@
-var database = require('../../database.js');
 var fs = require('fs');
-var configHelper = require('../../configHelper.js');
-var config = require('../../config.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
 var all = require('node-promise').all;
 
-configHelper.define({ key: 'pubkeyfile', fileMustExist: true });
+module.exports.apply = function(deps, app) {
+    deps.configHelper.define({ key: 'pubkeyfile', fileMustExist: true });
 
-function getServers(user) {
-    var p = new Promise();
+    function getServers(user) {
+        var p = new Promise();
 
-    function resolve(servers) {
-        p.resolve(servers);
-    }
-
-    function reject(err) {
-        p.reject(err);
-    }
-
-    if (user.isAdmin) {
-        database(function(err, models) {
-            if (err) {
-                return reject(err);
-            }
-            models.Server.all().success(resolve).error(reject);
-        });
-    } else {
-        user.getServers().success(resolve).error(reject);
-    }
-    return p;
-}
-
-function convertServersForView(servers) {
-    var ret = [];
-    servers.forEach(function(server) {
-        var limit = !server.bwlimit ? '0' : server.bwlimit;
-        ret.push({
-            id: server.id,
-            username: server.username,
-            hostname: server.hostname,
-            limit: limit,
-            path: server.path
-        });
-    });
-
-    return ret;
-}
-
-function sendServerList(res, user) {
-    getServers(user).then(function(servers) {
-        servers = convertServersForView(servers);
-        res.render(
-            'servers-list',
-            { servers: servers },
-            function(err, content) {
-                if (err) {
-                    return util.sendError(err);
-                }
-                util.sendSuccess(res, content);
-            }
-        );
-    }, function(err) {
-        util.sendError(err);
-    });
-}
-
-function getServerWithId(req, id) {
-    var p = new Promise();
-
-    function resolve(servers) {
-        if (servers.length > 0) {
-            p.resolve(servers[0]);
-        } else {
-            p.reject();
+        function resolve(servers) {
+            p.resolve(servers);
         }
+
+        function reject(err) {
+            p.reject(err);
+        }
+
+        if (user.isAdmin) {
+            deps.database(function(err, models) {
+                if (err) {
+                    return reject(err);
+                }
+                models.Server.all().success(resolve).error(reject);
+            });
+        } else {
+            user.getServers().success(resolve).error(reject);
+        }
+        return p;
     }
 
-    function reject(err) {
-        p.reject(err);
+    function convertServersForView(servers) {
+        var ret = [];
+        servers.forEach(function(server) {
+            var limit = !server.bwlimit ? '0' : server.bwlimit;
+            ret.push({
+                id: server.id,
+                username: server.username,
+                hostname: server.hostname,
+                limit: limit,
+                path: server.path
+            });
+        });
+
+        return ret;
     }
 
-    if (req.session.user.isAdmin) {
-        database(function(err, models) {
-            if (err) {
-                return reject(err);
+    function sendServerList(res, user) {
+        getServers(user).then(function(servers) {
+            servers = convertServersForView(servers);
+            res.render(
+                'servers-list',
+                { servers: servers },
+                function(err, content) {
+                    if (err) {
+                        return util.sendError(err);
+                    }
+                    util.sendSuccess(res, content);
+                }
+                );
+        }, function(err) {
+            util.sendError(err);
+        });
+    }
+
+    function getServerWithId(req, id) {
+        var p = new Promise();
+
+        function resolve(servers) {
+            if (servers.length > 0) {
+                p.resolve(servers[0]);
+            } else {
+                p.reject();
             }
-            models.Server.findAll({
+        }
+
+        function reject(err) {
+            p.reject(err);
+        }
+
+        if (req.session.user.isAdmin) {
+            deps.database(function(err, models) {
+                if (err) {
+                    return reject(err);
+                }
+                models.Server.findAll({
+                    where: {
+                        id: id
+                    }
+                }).success(resolve).error(reject);
+            });
+        } else {
+            req.session.user.getServers({
                 where: {
                     id: id
                 }
             }).success(resolve).error(reject);
-        });
-    } else {
-        req.session.user.getServers({
-            where: {
-                id: id
-            }
-        }).success(resolve).error(reject);
-    }
-
-    return p;
-}
-
-function getFileCount(serverId) {
-    var p = new Promise();
-
-    function reject(err) {
-        p.reject(err);
-    }
-
-    database(function(err, models) {
-        if (err) {
-            return reject(err);
         }
-        models.Server.find(serverId).success(function(server) {
-            if (server === null) {
-                return reject('server not found');
+
+        return p;
+    }
+
+    function getFileCount(serverId) {
+        var p = new Promise();
+
+        function reject(err) {
+            p.reject(err);
+        }
+
+        deps.database(function(err, models) {
+            if (err) {
+                return reject(err);
             }
-            models.FSEntry.count({ where: { ServerId: server.id }}).success(function(c) {
-                p.resolve(c);
+            models.Server.find(serverId).success(function(server) {
+                if (server === null) {
+                    return reject('server not found');
+                }
+                models.FSEntry.count({ where: { ServerId: server.id }}).success(function(c) {
+                    p.resolve(c);
+                }).error(reject);
             }).error(reject);
-        }).error(reject);
-    });
+        });
 
-    return p;
-}
+        return p;
+    }
 
-module.exports.apply = function(dependencies, app) {
     app.post('/servers', function(req, res) {
         getServers(req.session.user).then(function(servers) {
             res.render(
                 'servers',
                 {
                     servers: convertServersForView(servers),
-                    pubkey: fs.readFileSync(config.pubkeyfile)
+                    pubkey: fs.readFileSync(deps.config.pubkeyfile)
                 },
                 function(err, content) {
                     if (err) {
@@ -169,7 +166,7 @@ module.exports.apply = function(dependencies, app) {
             path += '/';
         }
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             models.Server.create({
                 username: username,
                 hostname: hostname,
@@ -177,7 +174,7 @@ module.exports.apply = function(dependencies, app) {
             }).success(function(server) {
                 server.setUser(req.session.user).success(function() {
                     sendServerList(res, req.session.user);
-                    dependencies.serverManager.addServer(server);
+                    deps.serverManager.addServer(server);
                 }).error(function(err) {
                     util.sendError(res, err);
                 });
@@ -194,7 +191,7 @@ module.exports.apply = function(dependencies, app) {
         }
 
         getServerWithId(req, req.body.id).then(function(server) {
-            dependencies.serverManager.delServer(server.id).then(function() {
+            deps.serverManager.delServer(server.id).then(function() {
                 sendServerList(res, req.session.user);
             });
         }, function() {
@@ -208,7 +205,7 @@ module.exports.apply = function(dependencies, app) {
         }
 
         getServerWithId(req, req.body.id).then(function(server) {
-            dependencies.serverManager.rescanServer(server.id);
+            deps.serverManager.rescanServer(server.id);
             util.sendSuccess(res);
         }, function() {
             util.sendError(res, 'Server not found!');
@@ -229,7 +226,7 @@ module.exports.apply = function(dependencies, app) {
             server.save(['bwlimit']).success(function() {
                 console.log('new limit: ' + limit);
                 util.sendSuccess(res);
-                dependencies.eventBus.emit('server-change', server.id);
+                deps.eventBus.emit('server-change', server.id);
             }).error(function() {
                 util.sendError(res, 'Error saving the settings.');
             });
@@ -244,7 +241,7 @@ module.exports.apply = function(dependencies, app) {
             var statuses = [];
             servers.forEach(function(server) {
                 promises.push(all([
-                        dependencies.serverManager.getServerStatus(server.id),
+                        deps.serverManager.getServerStatus(server.id),
                         getFileCount(server.id)
                     ]).then(function(data) {
                         var status = data[0];

@@ -1,10 +1,6 @@
-var database = require('./database.js');
-var rsync = require('./rsync');
 var Promise = require('node-promise').Promise;
 var all = require('node-promise').all;
 var when = require('node-promise').when;
-var configHelper = require('./configHelper.js');
-var config = require('./config.js');
 var fs = require('fs');
 var wrench = require('wrench');
 var events = require('events');
@@ -12,15 +8,16 @@ var util = require('util');
 var Token = require('./serverQueue.js').Token;
 var mv = require('mv');
 
-configHelper.defineMultiple(
-    [
-        { key: 'downloadDir', dirMustExist: true, defaultValue: __dirname + '/download' },
-        { key: 'keyfile', fileMustExist: true },
-        { key: 'download_retry_interval', defaultValue: 5 }
-    ]
-);
+var Download = module.exports = function(deps, modelInstance) {
+    deps.configHelper.defineMultiple(
+        [
+            { key: 'downloadDir', dirMustExist: true, defaultValue: __dirname + '/download' },
+            { key: 'keyfile', fileMustExist: true },
+            { key: 'download_retry_interval', defaultValue: 5 }
+        ]
+    );
 
-var Download = module.exports = function(dependencies, modelInstance) {
+    var rsync = (new require('./rsync'))(deps);
     var api = {};
     var startupPromise = new Promise();
     var downloading = false;
@@ -110,7 +107,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
                 deletePromise.resolve();
             } else {
                 var parts = path.split('/');
-                var basePath = modelInstance.complete ? findCategoryDir() : config.downloadDir;
+                var basePath = modelInstance.complete ? findCategoryDir() : deps.config.downloadDir;
                 when(basePath, function(path) {
                     var completepath = path + '/' + parts.pop();
                     try {
@@ -174,7 +171,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
             p.reject(err);
         };
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 efun(err);
             }
@@ -207,11 +204,11 @@ var Download = module.exports = function(dependencies, modelInstance) {
         serverOffline = false;
 
         var options = {
-            keyfile: config.keyfile,
+            keyfile: deps.config.keyfile,
             username: server.username,
             host: server.hostname,
             src: server.path + '/' + modelInstance.path,
-            dest: config.downloadDir + '/'
+            dest: deps.config.downloadDir + '/'
         };
 
         if (server.bwlimit !== undefined) {
@@ -283,7 +280,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         }
 
         clearTimeout(downloadTimer);
-        downloadtimer = setTimeout(startDownload, parseInt(config.download_retry_interval * 60 * 1000, 10));
+        downloadtimer = setTimeout(startDownload, parseInt(deps.config.download_retry_interval * 60 * 1000, 10));
     }
 
     function restartDownload() {
@@ -327,7 +324,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         token.on('position-change', function(newPosition) {
             currentQueuePosition = newPosition;
         });
-        dependencies.serverQueue.queue(server.id, token);
+        deps.serverQueue.queue(server.id, token);
     }
 
     function reloadServerInfoAndDownload(server) {
@@ -437,7 +434,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         findCategoryDir().then(function(dir) {
             var parts = modelInstance.path.split('/');
             var name = parts.pop();
-            var src = config.downloadDir + '/' + name;
+            var src = deps.config.downloadDir + '/' + name;
             var dst = dir + '/' + name;
             mv(src, dst, function(err) {
                 if (err) {
@@ -457,14 +454,14 @@ var Download = module.exports = function(dependencies, modelInstance) {
             p.reject(err);
         };
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 return efun(err);
             }
             refreshModelInstance().then(function(model) {
                 models.Category.find(model.CategoryId).success(function(cat) {
                     if (cat === null) {
-                        return p.resolve(config.downloadDir);
+                        return p.resolve(deps.config.downloadDir);
                     }
                     p.resolve(cat.destination);
                 }).error(efun);
@@ -473,7 +470,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         return p;
     }
 
-    dependencies.eventBus.on('server-change', function(serverId) {
+    deps.eventBus.on('server-change', function(serverId) {
         if (currentServer && currentServer.id === serverId) {
             console.log('download ' + modelInstance.id + ' server change');
             if (rsyncp) {
@@ -487,7 +484,7 @@ var Download = module.exports = function(dependencies, modelInstance) {
         }
     });
 
-    database(function(err, models) {
+    deps.database(function(err, models) {
         if (err) {
             throw err;
         }

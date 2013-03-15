@@ -1,12 +1,8 @@
-var database = require('./database.js');
 var Promise = require('node-promise').Promise;
-var configHelper = require('./configHelper.js');
-var config = require('./config.js');
 var _ = require('lodash');
 
-configHelper.define({ key: 'pathmapperCacheSize', defaultValue: 1000 });
-
-var pathmapper = module.exports = function(dependencies) {
+var pathmapper = module.exports = function(deps) {
+    deps.configHelper.define({ key: 'pathmapperCacheSize', defaultValue: 1000 });
     var api = {};
     var cache = [];
     var cacheSize = 30;
@@ -31,7 +27,7 @@ var pathmapper = module.exports = function(dependencies) {
     }
 
     function addToCache(query, result) {
-        if (cache.length >= config.pathmapperCacheSize) {
+        if (cache.length >= deps.config.pathmapperCacheSize) {
             cache.shift();
         }
 
@@ -97,21 +93,21 @@ var pathmapper = module.exports = function(dependencies) {
 
         options = _.merge({ searchWords: [], exclude: [], include: []}, options);
 
-        database(function(err, models, sequelize) {
+        deps.database(function(err, models, sequelize) {
             var depth = path === '' ? 0 : path.split('/').length;
 
-            var wheres = [database.format(['path LIKE ?', '' + path + '%'])];
+            var wheres = [deps.database.format(['path LIKE ?', '' + path + '%'])];
             options.searchWords.forEach(function(word) {
-                wheres.push(database.format(['path LIKE ?', '%' + word + '%']));
+                wheres.push(deps.database.format(['path LIKE ?', '%' + word + '%']));
             });
 
             options.exclude.forEach(function(serverId) {
-                wheres.push(database.format(['ServerId != ?', serverId]));
+                wheres.push(deps.database.format(['ServerId != ?', serverId]));
             });
 
             var incWheres = [];
             options.include.forEach(function(serverId) {
-                incWheres.push(database.format(['ServerId = ?', serverId]));
+                incWheres.push(deps.database.format(['ServerId = ?', serverId]));
             });
             if (incWheres.length > 0) {
                 wheres.push('(' + incWheres.join(' OR ') + ')');
@@ -168,8 +164,8 @@ var pathmapper = module.exports = function(dependencies) {
         return p;
     };
 
-    dependencies.eventBus.on('fs-change', clearCache);
-    dependencies.eventBus.on('server-removed', clearCache);
+    deps.eventBus.on('fs-change', clearCache);
+    deps.eventBus.on('server-removed', clearCache);
 
     return api;
 };

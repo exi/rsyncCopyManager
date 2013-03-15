@@ -1,10 +1,9 @@
 var rsync = require('./rsync');
-var database = require('./database.js');
 var Promise = require('node-promise').Promise;
 var All = require('node-promise').all;
 var child_process = require('child_process');
 
-var Server = module.exports = function(dependencies, serverId) {
+var Server = module.exports = function(deps, serverId) {
     var api = {};
     var startupPromise = new Promise();
     var promises = {};
@@ -21,7 +20,7 @@ var Server = module.exports = function(dependencies, serverId) {
             }
             delete promises[data.id];
         } else if (data.command === 'event' && data.topic !== undefined) {
-            dependencies.eventBus.emit(data.topic, data.data);
+            deps.eventBus.emit(data.topic, data.data);
         }
     });
 

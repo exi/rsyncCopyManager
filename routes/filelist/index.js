@@ -1,72 +1,72 @@
-var database = require('../../database.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
 var when = require('node-promise').when;
 var _ = require('lodash');
 
-function getExtFromName(name) {
-    var extstart = name.lastIndexOf('.');
-    var ext = extstart === -1 ? '' : name.substring(extstart + 1, name.length);
-    return ext;
-}
+module.exports.apply = function(deps, app) {
 
-function fseSortFunction(a, b) {
-    return a.name.localeCompare(b.name);
-}
+    function getExtFromName(name) {
+        var extstart = name.lastIndexOf('.');
+        var ext = extstart === -1 ? '' : name.substring(extstart + 1, name.length);
+        return ext;
+    }
 
-function getServerIds(user) {
-    var p = new Promise();
+    function fseSortFunction(a, b) {
+        return a.name.localeCompare(b.name);
+    }
 
-    user.getServers().success(function(servers) {
-        servers = servers.map(function(s) {
-            return s.id;
+    function getServerIds(user) {
+        var p = new Promise();
+
+        user.getServers().success(function(servers) {
+            servers = servers.map(function(s) {
+                return s.id;
+            });
+            p.resolve(servers);
+        }).error(function reject(err) {
+            p.reject(err);
         });
-        p.resolve(servers);
-    }).error(function reject(err) {
-        p.reject(err);
-    });
 
-    return p;
-}
+        return p;
+    }
 
-function includeOwnServerIds(user) {
-    var p = new Promise();
+    function includeOwnServerIds(user) {
+        var p = new Promise();
 
-    getServerIds(user).then(function(ids) {
-        p.resolve({ include: ids });
-    }, function(err) {
-        p.reject(err);
-    });
+        getServerIds(user).then(function(ids) {
+            p.resolve({ include: ids });
+        }, function(err) {
+            p.reject(err);
+        });
 
-    return p;
-}
+        return p;
+    }
 
-function excludeOwnServerIds(user) {
-    var p = new Promise();
+    function excludeOwnServerIds(user) {
+        var p = new Promise();
 
-    getServerIds(user).then(function(ids) {
-        p.resolve({ exclude: ids });
-    }, function(err) {
-        p.reject(err);
-    });
+        getServerIds(user).then(function(ids) {
+            p.resolve({ exclude: ids });
+        }, function(err) {
+            p.reject(err);
+        });
 
-    return p;
-}
+        return p;
+    }
 
-module.exports.apply = function(dependencies, app) {
     app.post('/filelist', function(req, res) {
         res.render(
             'filelist',
             function(err, content) {
                 res.json({content: content});
             }
-        );
+            );
     });
 
     app.post('/filelist/download', function(req, res) {
         if (req.body.path !== undefined) {
             var path = req.body.path;
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 models.Category.all().success(function(categories) {
                     res.render(
                         'filelist-download',
@@ -114,7 +114,7 @@ module.exports.apply = function(dependencies, app) {
                 }
 
                 options = _.merge(options, opts);
-                dependencies.pathMapper.getDirectoryContent(dir, options).then(function(fse) {
+                deps.pathMapper.getDirectoryContent(dir, options).then(function(fse) {
                     var dirs = [];
                     var files = [];
                     for (var name in fse.contents) {
@@ -154,7 +154,7 @@ module.exports.apply = function(dependencies, app) {
     app.post('/filelist/download-confirm', function(req, res) {
         if (req.body.hasOwnProperty('path') && req.body.hasOwnProperty('categoryId')) {
             var categoryId = parseInt(req.body.categoryId, 10);
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 if (err) {
                     return util.sendError(res, err);
                 }
@@ -165,7 +165,7 @@ module.exports.apply = function(dependencies, app) {
                         UserId: req.session.user.id,
                         progress: 0
                     }).success(function(download) {
-                        dependencies.downloadManager.addDownload(download);
+                        deps.downloadManager.addDownload(download);
                         util.sendSuccess(res);
                     }).error(function(err) {
                         util.sendError(res, err);

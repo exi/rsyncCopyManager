@@ -1,160 +1,158 @@
-var database = require('../../database.js');
 var util = require('../util.js');
 var Promise = require('node-promise').Promise;
 var all = require('node-promise').all;
+module.exports.apply = function(deps, app) {
 
-function getCategories() {
-    var p = new Promise();
-    function reject(err) {
-        p.reject(err);
-    }
-
-    database(function(err, models) {
-        if (err) {
-            return reject(err);
+    function getCategories() {
+        var p = new Promise();
+        function reject(err) {
+            p.reject(err);
         }
-        models.Category.all().success(function(categories) {
-            p.resolve(categories);
-        }).error(reject);
-    });
 
-    return p;
-}
-
-function getDownloads(user) {
-    var p = new Promise();
-
-    function reject(err) {
-        p.reject(err);
-    }
-
-    database(function(err, models) {
-        if (err) {
-            return reject(err);
-        }
-        models.Download.all().success(function(downloads) {
-            p.resolve(downloads);
-        }).error(reject);
-    });
-
-    return p;
-}
-
-function getDownloadsAndCategories(user) {
-    var p = new Promise();
-    var promises = [new Promise(), new Promise()];
-
-    function resolve(data) {
-        p.resolve({
-            downloads: data[0],
-            categories: data[1]
-        });
-    }
-
-    function reject(err) {
-        p.reject(err);
-    }
-
-    getDownloads(user).then(function(downloads) {
-        promises[0].resolve(downloads);
-    }, reject);
-
-    getCategories().then(function(cats) {
-        promises[1].resolve(cats);
-    }, reject);
-
-    all(promises).then(resolve, reject);
-
-    return p;
-}
-
-function convertDownloadsForView(downloads, categories, user) {
-    var ret = [];
-    var cmap = {};
-    categories.forEach(function(c) {
-        cmap[c.id] = c.name;
-    });
-
-    downloads.sort(function sort(a, b) {
-        if (a.UserId ===  b.UserId) {
-            return a.id - b.id;
-        }
-        return a.UserId === user.id ? -1 : 1;
-    });
-
-    downloads.forEach(function(download) {
-        var cid = download.CategoryId;
-        var cname = cmap.hasOwnProperty(cid) ? cmap[cid] : cmap[1];
-        ret.push({
-            id: download.id,
-            path: download.path,
-            category: cname,
-            categoryId: download.CategoryId,
-            owns: user.isAdmin || download.UserId === user.id ? true : false,
-            canEditCategory: download.complete !== true 
-        });
-    });
-
-    return ret;
-}
-
-function getDownloadWithId(req, id, permissive) {
-    var p = new Promise();
-
-    function resolve(downloads) {
-        if (downloads.length > 0) {
-            p.resolve(downloads[0]);
-        } else {
-            p.reject();
-        }
-    }
-
-    function reject(err) {
-        p.reject(err);
-    }
-
-    if (req.session.user.isAdmin || permissive) {
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 return reject(err);
             }
-            models.Download.findAll({
+            models.Category.all().success(function(categories) {
+                p.resolve(categories);
+            }).error(reject);
+        });
+
+        return p;
+    }
+
+    function getDownloads(user) {
+        var p = new Promise();
+
+        function reject(err) {
+            p.reject(err);
+        }
+
+        deps.database(function(err, models) {
+            if (err) {
+                return reject(err);
+            }
+            models.Download.all().success(function(downloads) {
+                p.resolve(downloads);
+            }).error(reject);
+        });
+
+        return p;
+    }
+
+    function getDownloadsAndCategories(user) {
+        var p = new Promise();
+        var promises = [new Promise(), new Promise()];
+
+        function resolve(data) {
+            p.resolve({
+                downloads: data[0],
+                categories: data[1]
+            });
+        }
+
+        function reject(err) {
+            p.reject(err);
+        }
+
+        getDownloads(user).then(function(downloads) {
+            promises[0].resolve(downloads);
+        }, reject);
+
+        getCategories().then(function(cats) {
+            promises[1].resolve(cats);
+        }, reject);
+
+        all(promises).then(resolve, reject);
+
+        return p;
+    }
+
+    function convertDownloadsForView(downloads, categories, user) {
+        var ret = [];
+        var cmap = {};
+        categories.forEach(function(c) {
+            cmap[c.id] = c.name;
+        });
+
+        downloads.sort(function sort(a, b) {
+            if (a.UserId ===  b.UserId) {
+                return a.id - b.id;
+            }
+            return a.UserId === user.id ? -1 : 1;
+        });
+
+        downloads.forEach(function(download) {
+            var cid = download.CategoryId;
+            var cname = cmap.hasOwnProperty(cid) ? cmap[cid] : cmap[1];
+            ret.push({
+                id: download.id,
+                path: download.path,
+                category: cname,
+                categoryId: download.CategoryId,
+                owns: user.isAdmin || download.UserId === user.id ? true : false,
+                canEditCategory: download.complete !== true 
+            });
+        });
+
+        return ret;
+    }
+
+    function getDownloadWithId(req, id, permissive) {
+        var p = new Promise();
+
+        function resolve(downloads) {
+            if (downloads.length > 0) {
+                p.resolve(downloads[0]);
+            } else {
+                p.reject();
+            }
+        }
+
+        function reject(err) {
+            p.reject(err);
+        }
+
+        if (req.session.user.isAdmin || permissive) {
+            deps.database(function(err, models) {
+                if (err) {
+                    return reject(err);
+                }
+                models.Download.findAll({
+                    where: {
+                        id: id
+                    }
+                }).success(resolve).error(reject);
+            });
+        } else {
+            req.session.user.getDownloads({
                 where: {
                     id: id
                 }
             }).success(resolve).error(reject);
-        });
-    } else {
-        req.session.user.getDownloads({
-            where: {
-                id: id
-            }
-        }).success(resolve).error(reject);
+        }
+
+        return p;
     }
 
-    return p;
-}
-
-function sendDownloadList(res, user) {
-    var efun = util.wrapErrorFunction(res);
-    getDownloadsAndCategories(user).then(function(data) {
-        res.render(
-            'downloads-list',
-            {
-                downloads: convertDownloadsForView(data.downloads, data.categories, user),
-                categories: data.categories
-            },
-            function(err, content) {
-                if (err) {
-                    return efun(err);
+    function sendDownloadList(res, user) {
+        var efun = util.wrapErrorFunction(res);
+        getDownloadsAndCategories(user).then(function(data) {
+            res.render(
+                'downloads-list',
+                {
+                    downloads: convertDownloadsForView(data.downloads, data.categories, user),
+                    categories: data.categories
+                },
+                function(err, content) {
+                    if (err) {
+                        return efun(err);
+                    }
+                    res.json({ type: 'success', content: content });
                 }
-                res.json({ type: 'success', content: content });
-            }
-        );
-    }, efun);
-}
-
-module.exports.apply = function(dependencies, app) {
+                );
+        }, efun);
+    }
 
     app.post('/downloads', function(req, res) {
         var efun = util.wrapErrorFunction(res);
@@ -181,7 +179,7 @@ module.exports.apply = function(dependencies, app) {
             var promises = [];
             var statuses = [];
             downloads.forEach(function(download) {
-                promises.push(dependencies.downloadManager.getDownloadStatus(download.id).then(function(status) {
+                promises.push(deps.downloadManager.getDownloadStatus(download.id).then(function(status) {
                     var content = {
                         id: download.id,
                         transferred: 0,
@@ -317,8 +315,8 @@ module.exports.apply = function(dependencies, app) {
 
         var id = parseInt(req.body.id, 10);
         getDownloadWithId(req, id).then(function(download) {
-            dependencies.downloadManager.delDownload(download.id, req.body.deleteData === 'true').then(function() {
-                database(function(err, models) {
+            deps.downloadManager.delDownload(download.id, req.body.deleteData === 'true').then(function() {
+                deps.database(function(err, models) {
                     if (err) {
                         return efun(err);
                     }
@@ -346,7 +344,7 @@ module.exports.apply = function(dependencies, app) {
         var categoryId = parseInt(req.body.categoryId, 10);
         var id = parseInt(req.body.id, 10);
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (err) {
                 return efun(err);
             }

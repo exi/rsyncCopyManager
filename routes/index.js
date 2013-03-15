@@ -5,16 +5,15 @@ var servers = require('./servers');
 var filelist = require('./filelist');
 var downloads = require('./downloads');
 var settings = require('./settings');
-var database = require('../database.js');
 var util = require('./util.js');
 
-module.exports.apply = function(dependencies, app) {
+module.exports.apply = function(deps, app) {
     app.all('/login', function(req, res) {
         var renderdata = {
             title: 'rsyncCopyManager - Login'
         };
 
-        database(function(err, models) {
+        deps.database(function(err, models) {
             if (req.body && req.body.user && req.body.password) {
                 models.User.find({
                     where: {
@@ -40,7 +39,7 @@ module.exports.apply = function(dependencies, app) {
 
     app.all('*', function(req, res, next) {
         if (req.session.user) {
-            database(function(err, models) {
+            deps.database(function(err, models) {
                 models.User.find({
                     where: {
                         id: req.session.user.id
@@ -70,15 +69,15 @@ module.exports.apply = function(dependencies, app) {
     });
 
     app.post('/spaceLeft', function(req, res) {
-        dependencies.downloadManager.getSpaceLeft().then(function(spaceLeft) {
+        deps.downloadManager.getSpaceLeft().then(function(spaceLeft) {
             util.sendSuccess(res, util.convertToHumanReadableSize(spaceLeft) + ' left on device');
         }, function(err) {
             util.sendError(res, err);
         });
     });
 
-    servers.apply(dependencies, app);
-    filelist.apply(dependencies, app);
-    downloads.apply(dependencies, app);
-    settings.apply(dependencies, app);
+    servers.apply(deps, app);
+    filelist.apply(deps, app);
+    downloads.apply(deps, app);
+    settings.apply(deps, app);
 };
