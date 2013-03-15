@@ -14,6 +14,7 @@
             td
               input.span5.categorylist-destination(placeholder='New destination', type='text', value='#{category.destination}', data-id='#{category.id}')
             td
-              button.btn.btn-danger.categorylist-delete(type='button', data-loading-text='Deleting...', data-id='#{category.id}') Delete
+              if (category.id !== 1)
+                button.btn.btn-danger.categorylist-delete(type='button', data-loading-text='Deleting...', data-id='#{category.id}') Delete
   else
     p You did not add any categories yet.
