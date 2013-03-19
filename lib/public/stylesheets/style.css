@@ -108,3 +108,8 @@ body {
 .loading-screen img {
   padding-top: 190px;
 }
+.table .input-append,
+.table .input-prepend,
+.table input {
+  margin-bottom: 0px !important;
+}
