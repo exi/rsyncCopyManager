@@ -1,6 +1,9 @@
 module.exports = {
-    cookieSecret: 'soosecret',
-    cookieName: 'rsyncCopyManager',
+    session: {
+        name: 'rsyncCopyManager',
+        secret: 'soosecret',
+        lifeTime: 48 * 60 //48 hours
+    },
     port: 3000,
     uid: 'exi',
     pubkeyfile: __dirname + '/keys/key.pub',
