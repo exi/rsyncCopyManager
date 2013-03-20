@@ -21,7 +21,8 @@ module.exports = {
     },
     pathmapperCacheSize: 10000,
     rsync: {
-        maxDepth: 6
+        maxDepth: 6,
+        cipher: false
     },
     db: {
         name: 'rsyncCopyManager',
