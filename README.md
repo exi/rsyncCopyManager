@@ -22,7 +22,7 @@ Installation
 2. execute in the extracted folder `npm install` (Node.js Package Manager)
 3. copy the `config.js.sample` to `config.js`
 4. edit `config.js` to suit your needs
-5. start with `node app.js`
+5. start with `./runserver.sh`
 
 Keys
 ====
