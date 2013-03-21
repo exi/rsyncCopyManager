@@ -4,7 +4,6 @@ module.exports = {
         secret: 'soosecret',
         lifeTime: 48 * 60 //48 hours
     },
-    port: 3000,
     uid: 'exi',
     pubkeyfile: __dirname + '/keys/key.pub',
     keyfile: __dirname + '/keys/key',
@@ -49,13 +48,14 @@ module.exports = {
     pathmapperCacheSize: 10000,
     rsync: {
         maxDepth: 6,
-        cipher: false
+        cipher: false // This can be used to change the used ssh cipher
     },
     db: {
         name: 'rsyncCopyManager',
         user: 'root',
         password: 'root',
-        host: 'localhost'
+        host: 'localhost',
+        logging: false // Change the logging for SQL queries, change it to console.error to view the queries
     },
     logging: 'default'
 };
