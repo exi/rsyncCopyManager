@@ -11,6 +11,33 @@ module.exports = {
     fs_check_interval: 60 * 24, //24 hours
     download_retry_interval: 5, //5 minutes
     downloadDir: __dirname + '/download/',
+    /*
+    * Uncomment http/https config as you like.
+    * For infos on how to generate ssl keys, check out:
+    * http://www.thegeekstuff.com/2009/07/linux-apache-mod-ssl-generate-key-csr-crt-file/
+    * If you don't strip the ssl passphrase from the keys, you will be queried at server
+    * startup.
+    */
+    //http: {
+    //    port: 3000,
+    //    ip: '0.0.0.0'
+    //},
+    //https: {
+    //    keyfile: __dirname + '/keys/rsync.local.key',
+    //    crtfile: __dirname + '/keys/rsync.local.crt',
+    //    /*
+    //    * This line is only required if you can't strip the passphrase from the certificate,
+    //    * and don't want to be asked to input the passphrase on startup.
+    //    */
+    //    passphrase: "my secret passphrase",
+    //    /*
+    //    * If this line is present, the server will redirect http calls to this url.
+    //    * This will allow you to force users to use https.
+    //    */
+    //    httpRedirect: 'https://rsync.local:3001',
+    //    port: 3001,
+    //    ip: '0.0.0.0'
+    //},
     defaultUser: {
         name: 'admin',
         password: 'admin'
