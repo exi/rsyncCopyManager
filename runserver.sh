@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
-node app.js >> access.log
+MYDIR=`dirname $0`
+node $MYDIR/app.js >> $MYDIR/access.log
