@@ -12,6 +12,5 @@
     , "node-promise": "*"
     , "wrench": "*"
     , "bcrypt": "*"
-    , "mv": "git://github.com/superjoe30/node-mv.git#master"
   }
 }
