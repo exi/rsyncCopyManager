@@ -5,6 +5,7 @@ module.exports = {
         lifeTime: 48 * 60 //48 hours
     },
     uid: 'exi',
+    gid: 'exi',
     pubkeyfile: __dirname + '/keys/key.pub',
     keyfile: __dirname + '/keys/key',
     fs_check_interval: 60 * 24, //24 hours
