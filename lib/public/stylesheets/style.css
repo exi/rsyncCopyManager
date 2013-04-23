@@ -1,5 +1,7 @@
 @import "../lib/bootstrap/css/bootstrap.min.css";
 
+@import "../lib/bootstrap-select/bootstrap-select.min.css";
+
 @import "../lib/jqueryFileTree/jqueryFileTree.css";
 
 @import "../lib/bootstrap/css/bootstrap-responsive.min.css";

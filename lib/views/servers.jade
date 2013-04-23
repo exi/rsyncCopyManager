@@ -7,6 +7,11 @@
           legend Add Server
           .form-status
           .control-group
+            label.control-label(for='type') ServerType:
+            .controls
+              select.selectpicker(name='type')
+                option(value='rsync') Rsync
+          .control-group
             label.control-label(for='host') Hostname:
             .controls
               input(type='text', name='hostname', placeholder='Hostname')
