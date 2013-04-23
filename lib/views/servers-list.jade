@@ -1,31 +1,7 @@
 if (servers.length > 0)
-  table.table.table-striped.server-status-list
-    thead
-      tr
-        th Host
-        th User
-        th Path
-        th Limit
-        th Files
-        th Status
-        th
+  .server-status-list
     each server in servers
-      tbody.server-status(data-id='#{server.id}')
-        tr
-          td= server.hostname
-          td= server.username
-          td= server.path
-          td
-            .input-append
-              input.span1.server-limit(placeholder='Limit', value='#{server.limit}', type='text', data-id='#{server.id}')
-              span.add-on KB
-          td.server-status-filecount
-          td.server-status-text
-          td
-            button.btn.btn-primary.server-rescan(type='button', data-id='#{server.id}') Rescan
-            button.btn.btn-danger.server-delete(type='button', data-id='#{server.id}') Delete
-        tr.server-status-error-container(style='display: none;')
-          td(colspan='6')
-            pre.server-status-error-output
+      if (server.type == 'rsync')
+        include provider/rsync/server-info
 else
   p You did not add any servers yet.
