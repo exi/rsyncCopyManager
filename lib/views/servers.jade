@@ -1,7 +1,7 @@
 .container
   h2 Servers
-  .row
-    .span5
+  .row-fluid
+    .span12
       .well
         form.form-horizontal.add-server-form
           legend Add Server
@@ -14,10 +14,6 @@
                 option(value='ftp') Ftp
           .subform-container
             include provider/rsync/addForm
-    .span7
-      .well
-        p Add this pubkey to your authorized_keys file:
-        textarea(rows='10', style='width: 100%; word-wrap: break-word')= pubkey
 
   .servers-list
     include servers-list

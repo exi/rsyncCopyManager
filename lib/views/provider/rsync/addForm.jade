@@ -13,3 +13,6 @@
 .control-group
   .controls
     button.btn.btn-primary(href='#') Add Server
+.row-fluid
+  p Add this pubkey to your authorized_keys file:
+  textarea(rows='5', style='width: 100%; word-wrap: break-word')= formData.pubkey
