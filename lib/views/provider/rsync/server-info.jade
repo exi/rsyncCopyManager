@@ -1,0 +1,27 @@
+.well.server-status(data-id='#{server.id}').rsync-server-status
+  legend= server.data.hostname
+  .row-fluid
+      .span3
+        strong Username:
+        span= server.data.username
+      .span3
+        strong Path:
+        span= server.data.path
+      .span3
+        strong Limit:
+        .input-append(style='margin-bottom: 0px;')
+          input.span3.server-limit(placeholder='Limit', value='#{server.bwlimit}', type='text', data-id='#{server.id}')
+          span.add-on KB
+      .span3
+        strong Files:
+        span.server-status-filecount
+  .row-fluid
+    .span3
+      button.btn.btn-primary.server-rescan(type='button', data-id='#{server.id}') Rescan
+      button.btn.btn-danger.server-delete(type='button', data-id='#{server.id}') Delete
+    .span9
+      strong Status:
+      span.server-status-text
+  .row-fluid
+    .span12.server-status-error-container(style='margin-top: 10px; display: none;')
+      pre.server-status-error-output(style='margin-bottom: 0px;')

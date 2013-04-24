@@ -9,23 +9,11 @@
           .control-group
             label.control-label(for='type') ServerType:
             .controls
-              select.selectpicker(name='type')
+              select.selectpicker.server-type-selector(name='type')
                 option(value='rsync') Rsync
-          .control-group
-            label.control-label(for='host') Hostname:
-            .controls
-              input(type='text', name='hostname', placeholder='Hostname')
-          .control-group
-            label.control-label(for='username') Username:
-            .controls
-              input(type='text', name='username', placeholder='Username')
-          .control-group
-            label.control-label(for='path') Path:
-            .controls
-              input(type='text', name='path', placeholder='Path')
-          .control-group
-            .controls
-              button.btn.btn-primary(href='#') Add Server
+                option(value='ftp') Ftp
+          .subform-container
+            include provider/rsync/addForm
     .span7
       .well
         p Add this pubkey to your authorized_keys file:
